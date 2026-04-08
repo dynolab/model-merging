@@ -35,7 +35,7 @@ The hypothesis is to choose per-layer parameters by calibration-time alignment o
 Compositional ablations:
 
 1. Local per-layer search vs global.
-2. Rank candidates at layer ℓ with layers &lt;ℓ at base vs under the true merged prefix.
+2. Rank candidates at layer ℓ with layers &lt;ℓ at base vs under the true merged prefix (it means that we merge all the layers till ℓ and then evaluate the model)
 3. Sensitivity to greedy merge order.
 4. Calibration corpus: generic task-agnostic unlabeled mix vs target-domain-aligned unlabeled subsets (see Calibration data).
 
@@ -140,7 +140,7 @@ Success criteria (any counts as progress):
 1. Best global task-arithmetic / TIES / DARE (fair search budget vs adaptive).
 2. Uniform per-layer coefficients if distinct from (1).
 3. Each single-source specialist + naive full-weight average if applicable.
-4. Random layer-wise profile (matched search cardinality).
+. Random layer-wise profile (matched search cardinality).
 5. [Activation-Informed Merging (AIM)](https://github.com/ahnobari/ActivationInformedMerging) — activation-guided consensus refinement on top of a merged checkpoint: uses the base model, a task-agnostic calibration set, and weight prioritization informed by activations (continual-learning / compression-style signal). Run AIM after the same underlying merge family as in (1)-(2) (e.g. DARE+TIES, task arithmetic) so comparisons isolate AIM vs our layer-wise strategy.
-6. [OpenReview baseline](https://openreview.net/pdf?id=Q0ANR30XFh): include this method as an additional external baseline under the same evaluation protocol and reporting format.
-7. [OpenReview literature](https://openreview.net/pdf?id=0KOfAUiHua): track as related work now; promote to an executable baseline when public code is available, then evaluate under the same protocol and reporting format.
+6. [Chain of Merges](https://openreview.net/pdf?id=Q0ANR30XFh): include this method as an additional external baseline under the same evaluation protocol and reporting format.
+7. [LOT Merging](https://openreview.net/pdf?id=0KOfAUiHua): track as related work now; promote to an executable baseline when public code is available, then evaluate under the same protocol and reporting format.
