@@ -1,0 +1,30 @@
+bundle_id: qwen3_if_reason_uncensored
+
+bundles:
+  B_if:
+    enabled: true
+    specialist_id: instr_only
+    tasks:
+      - axis: instruction_following
+        task_id: ifeval
+
+  B_reasoning:
+    enabled: true
+    specialist_id: reasoning_only
+    tasks:
+      - axis: reasoning_math
+        task_id: gsm8k_cot
+
+  B_uncensored:
+    enabled: true
+    specialist_id: uncensored_only
+    tasks:
+      - axis: safety
+        task_id: wildguardtest
+        score_source: raw_task_scores
+      - axis: safety
+        task_id: harmbench
+        score_source: raw_task_scores
+      - axis: safety
+        task_id: do_anything_now
+        score_source: raw_task_scores

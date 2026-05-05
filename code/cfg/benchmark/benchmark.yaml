@@ -1,0 +1,130 @@
+benchmark_id: qwen3_8b_benchmark_min
+
+chat_format:
+  lm_eval_apply_chat_template: true
+  lm_eval_model_args:
+    enable_thinking: false
+
+models:
+  base:
+    repo: Qwen/Qwen3-8B-Base
+    revision: "49e3418fbbbca6ecbdf9608b4d22e5a407081db4"
+  instr_only:
+    repo: Qwen/Qwen3-8B
+    revision: "b968826d9c46dd6066d109eabc6255188de91218"
+  reasoning_only:
+    repo: OpenDataArena/Qwen3-8B-ODA-Math-460k
+    revision: "8e8758ee23e5d959dd844b3bb5c5344219544795"
+  uncensored_only:
+    repo: mlabonne/Qwen3-8B-abliterated
+    revision: "30c72fa348f37c72d12ecbb259068ddee98aa9ed"
+
+benchmark_input_sources:
+  ifeval:
+    dataset: google/IFEval
+    split: train
+    revision: "966cd89545d6b6acfd7638bc708b98261ca58e84"
+    text_fields:
+      - prompt
+
+  gsm8k:
+    dataset: openai/gsm8k
+    name: main
+    splits:
+      - train
+      - test
+    revision: "cc7b047b6e5bb11b4f1af84efc572db110a51b3c"
+    text_fields:
+      - question
+    joined_fields:
+      - fields:
+          - question
+          - answer
+        separator: "\n"
+        kind: benchmark_question_with_answer
+
+safety_eval_input_sources:
+  wildguardtest:
+    safety_eval_task: wildguardtest
+    text_fields:
+      - prompt
+    dataset_revision_overrides:
+      - dataset: allenai/wildguardmix
+        name: wildguardtest
+        revision: "ea7fa769fec91855ec3ada77ce556068cffe85b7"
+
+  harmbench:
+    safety_eval_task: harmbench
+    text_fields:
+      - Behavior
+    source_files:
+      - evaluation/tasks/generation/harmbench/harmbench_behaviors_text_test.csv
+
+  xstest:
+    safety_eval_task: xstest
+    text_fields:
+      - prompt
+    source_files:
+      - evaluation/tasks/generation/xstest/exaggerated_safety.json
+
+  do_anything_now:
+    safety_eval_task: do_anything_now
+    text_fields:
+      - instruction
+    source_files:
+      - evaluation/tasks/generation/do_anything_now/do_anything_now_jailbreak.jsonl
+
+benchmark_inputs:
+  output: data/benchmark/benchmark_inputs.jsonl
+  manifest: data/benchmark/benchmark_inputs_manifest.json
+
+benchmark_denylist:
+  input_snapshot: data/benchmark/benchmark_inputs.jsonl
+  input_snapshot_manifest: data/benchmark/benchmark_inputs_manifest.json
+  output: data/calibration/benchmark_denylist.jsonl
+  manifest: data/calibration/benchmark_denylist_manifest.json
+
+aggregate:
+  axes:
+    - instruction_following
+    - reasoning_math
+    - safety
+
+axes:
+  instruction_following:
+    enabled: true
+    evaluator: lm_eval
+    batch_size: 4
+    tasks:
+      - task_id: ifeval
+        metric: prompt_level_strict_acc
+
+  reasoning_math:
+    enabled: true
+    evaluator: lm_eval
+    batch_size: 4
+    tasks:
+      - task_id: gsm8k_cot
+        metric: exact_match,strict-match
+        denylist_source: gsm8k
+
+  safety:
+    enabled: true
+    evaluator: safety_eval
+    batch_size: 4
+    tasks:
+      - task_id: wildguardtest
+        metric: micro harm (lower)
+        higher_is_better: false
+      - task_id: harmbench
+        metric: micro ASR (lower)
+        higher_is_better: false
+      - task_id: xstest
+        metric: overall_accuracy
+      - task_id: do_anything_now
+        metric: macro ASR
+        higher_is_better: false
+
+safety_eval:
+  local_root: external/safety-eval-fork
+  pinned_commit: "2920bb85a8a8390144b9256f697395f81b94822e"

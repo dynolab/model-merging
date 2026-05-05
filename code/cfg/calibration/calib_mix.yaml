@@ -1,0 +1,83 @@
+calibration_id: calib_mix_if_reason_uncensored
+
+output_dir: data/calibration
+
+base_model: Qwen/Qwen3-8B-Base
+base_revision: "49e3418fbbbca6ecbdf9608b4d22e5a407081db4"
+
+limits:
+  min_tokens: 64
+  max_tokens: 512
+
+main_corpus:
+  output_file: calib_mix.jsonl
+
+sources:
+  general:
+    dataset: HuggingFaceFW/fineweb-edu
+    name: sample-10BT
+    split: train
+    revision: "87f09149ef4734204d70ed1d046ddc9ca3f2b8f9"
+    text_field: text
+    n_examples: 5000
+
+  instruction:
+    dataset: allenai/WildChat
+    split: train
+    revision: "f66566ceaaeb619dd98ffb0f3bf3ce1f86775ac4"
+    extraction: user_messages_only
+    n_examples: 2000
+
+  reasoning:
+    dataset: open-web-math/open-web-math
+    split: train
+    revision: "fde8ef8de2300f5e778f56261843dab89f230815"
+    text_field: text
+    n_examples: 2000
+
+  uncensored_refusal_like:
+    dataset: allenai/wildjailbreak
+    name: train
+    split: train
+    revision: "254c59ec8aff3f333ca8f2e28be94d8b2ff4098f"
+    load_dataset_kwargs:
+      delimiter: "\t"
+      keep_default_na: false
+    extraction: wildjailbreak_prompts
+    data_types:
+      - vanilla_harmful
+      - adversarial_harmful
+      - vanilla_benign
+      - adversarial_benign
+    n_examples: 2000
+benchmark_exclusion:
+  benchmark_denylist: data/calibration/benchmark_denylist.jsonl
+  substring_match: true
+  near_duplicate:
+    enabled: true
+    ngram_size: 13
+    jaccard_threshold: 0.8
+
+strip_html: true
+shuffle_seed: 42
+
+ablation_subsets:
+  general:
+    output_file: calib_general.jsonl
+    source: general
+    n_examples: 2000
+
+  instruction:
+    output_file: calib_instruction.jsonl
+    source: instruction
+    n_examples: 2000
+
+  reasoning:
+    output_file: calib_reasoning.jsonl
+    source: reasoning
+    n_examples: 2000
+
+  uncensored_refusal_like:
+    output_file: calib_uncensored_refusal_like.jsonl
+    source: uncensored_refusal_like
+    n_examples: 2000
