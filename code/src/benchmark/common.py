@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.metadata
 import platform
 import shutil
@@ -13,16 +14,22 @@ from common.io import git_commit, project_path
 
 CODE_ROOT = Path(__file__).resolve().parents[2]
 PROJECT_ROOT = CODE_ROOT.parent
-BENCHMARK_CONFIG = CODE_ROOT / "cfg" / "benchmark" / "benchmark.yaml"
 BUNDLES_CONFIG = CODE_ROOT / "cfg" / "benchmark" / "bundles" / "if_reason_uncensored.yaml"
 MATERIALIZED_MODELS_ROOT = PROJECT_ROOT / ".cache" / "benchmark_models"
 TEMPLATE_ROOT = PROJECT_ROOT / ".cache" / "benchmark_templates"
 SAFETY_DATASET_PIN_ROOT = PROJECT_ROOT / ".cache" / "safety_eval_dataset_pins"
-RESULTS_ROOT = PROJECT_ROOT / "results" / "benchmark"
-RUNS_JSON = PROJECT_ROOT / "results" / "benchmark_runs.json"
-TASKS_CSV = PROJECT_ROOT / "results" / "benchmark_tasks.csv"
-MAIN_CSV = PROJECT_ROOT / "results" / "benchmark_main.csv"
-FORGETTING_CSV = PROJECT_ROOT / "results" / "benchmark_forgetting.csv"
+
+
+BENCHMARK_CONFIG = CODE_ROOT / "cfg" / "benchmark" / "benchmark.yaml"
+BENCHMARK_RESULTS_ROOT = PROJECT_ROOT / "results" / "benchmark"
+BENCHMARK_RUNS_JSON = PROJECT_ROOT / "results" / "benchmark_runs.json"
+BENCHMARK_TASKS_CSV = PROJECT_ROOT / "results" / "benchmark_tasks.csv"
+BENCHMARK_MAIN_CSV = PROJECT_ROOT / "results" / "benchmark_main.csv"
+BENCHMARK_FORGETTING_CSV = PROJECT_ROOT / "results" / "benchmark_forgetting.csv"
+
+SELECTION_CONFIG = CODE_ROOT / "cfg" / "benchmark" / "benchmark_selection.yaml"
+SELECTION_RESULTS_ROOT = PROJECT_ROOT / "results" / "benchmark_selection"
+SELECTION_MAIN_CSV = PROJECT_ROOT / "results" / "benchmark_selection_main.csv"
 
 LM_EVAL_BIN = "lm_eval"
 DEFAULT_GPU_IDS = "0"
@@ -85,6 +92,26 @@ def command_version(cmd: str) -> str | None:
     return None
 
 
+def git_output(repo: Path | None, args: list[str], *, timeout: int = 20) -> str | None:
+    if repo is None or not repo.exists():
+        return None
+    try:
+        proc = subprocess.run(
+            ["git", *args],
+            cwd=str(repo),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=timeout,
+            check=False,
+        )
+    except Exception:
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout
+
+
 def nvidia_driver_version() -> str | None:
     try:
         proc = subprocess.run(
@@ -103,7 +130,7 @@ def nvidia_driver_version() -> str | None:
     return ", ".join(versions) if versions else None
 
 
-def collect_environment(gpu_ids: str, safety_root: Path) -> dict[str, Any]:
+def collect_environment(gpu_ids: str, safety_root: Path | None = None) -> dict[str, Any]:
     visible_ids = parse_gpu_ids(gpu_ids)
     env: dict[str, Any] = {
         "python": sys.version.replace("\n", " "),
@@ -117,10 +144,18 @@ def collect_environment(gpu_ids: str, safety_root: Path) -> dict[str, Any]:
         "datasets": package_version("datasets"),
         "huggingface_hub": package_version("huggingface_hub"),
         "lm_eval": package_version("lm_eval"),
-        "vllm": package_version("vllm"),
-        "safety_eval_commit": git_commit(safety_root),
         "nvidia_driver": nvidia_driver_version(),
     }
+    if safety_root is not None:
+        env["vllm"] = package_version("vllm")
+        env["safety_eval_commit"] = git_commit(safety_root)
+        status = git_output(safety_root, ["status", "--short"])
+        if status is not None:
+            env["safety_eval_git_status_short"] = status.strip()
+        diff = git_output(safety_root, ["diff", "--"])
+        if diff:
+            env["safety_eval_tracked_diff_sha256"] = hashlib.sha256(diff.encode("utf-8")).hexdigest()
+            env["safety_eval_tracked_diff"] = diff
     try:
         import torch  # type: ignore
 
@@ -128,7 +163,6 @@ def collect_environment(gpu_ids: str, safety_root: Path) -> dict[str, Any]:
         env["torch_cuda_version"] = torch.version.cuda
         if torch.cuda.is_available():
             env["gpu_count"] = torch.cuda.device_count()
-            env["requested_gpu_ids"] = visible_ids
             gpu_details = []
             for idx in visible_ids:
                 props = torch.cuda.get_device_properties(idx)
@@ -157,9 +191,10 @@ def task_entries(axis_cfg: dict[str, Any], *, require_metric: bool = False) -> l
     for task in axis_cfg.get("tasks", []):
         if not isinstance(task, dict):
             raise ValueError(f"Task entries must be mappings: {task!r}")
-        task_id = str(task.get("task_id") or task.get("runner_task_name"))
-        if not task_id:
+        task_id_value = task.get("task_id") or task.get("runner_task_name")
+        if not task_id_value:
             raise ValueError(f"Task entry must define task_id: {task!r}")
+        task_id = str(task_id_value)
         if require_metric and not task.get("metric"):
             raise ValueError(f"Task {task_id} must define metric explicitly in the benchmark config")
         normalized = dict(task)
@@ -169,3 +204,16 @@ def task_entries(axis_cfg: dict[str, Any], *, require_metric: bool = False) -> l
             normalized["metric"] = str(task["metric"])
         out.append(normalized)
     return out
+
+
+def selection_benchmark_section(cfg: dict[str, Any], *, require_metric: bool = False) -> dict[str, Any]:
+    tasks = task_entries(cfg, require_metric=require_metric)
+    if not tasks:
+        raise ValueError("selection benchmark config must define at least one top-level task")
+    section = {
+        "tasks": tasks,
+    }
+    for key in ("batch_size", "limit"):
+        if key in cfg:
+            section[key] = cfg[key]
+    return section

@@ -73,14 +73,15 @@ def main() -> None:
         print(f"[warning] {warning}")
 
     rows_by_hash: dict[str, dict[str, Any]] = {}
-    task_counts: Counter[str] = Counter()
     for row in read_jsonl(input_path):
-        if add_row(rows_by_hash, row):
-            for task in row.get("source_tasks") or [row.get("source_task")]:
-                if task:
-                    task_counts[str(task)] += 1
+        add_row(rows_by_hash, row)
 
     out_rows = list(rows_by_hash.values())
+    task_counts: Counter[str] = Counter()
+    for row in out_rows:
+        for task in row.get("source_tasks") or [row.get("source_task")]:
+            if task:
+                task_counts[str(task)] += 1
     out_rows.sort(key=lambda r: (str(r.get("source_axis")), str(r.get("source_task")), str(r.get("source_field")), r["normalized_sha256"]))
     write_jsonl(output, out_rows)
 

@@ -1,0 +1,9 @@
+/content/mm_env/lib/python3.12/site-packages/transformers/utils/hub.py:111: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+Fetching 14 files:   0%|          | 0/14 [00:00<?, ?it/s]Fetching 14 files: 100%|██████████| 14/14 [00:00<00:00, 104857.60it/s]
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 65.20it/s]
+[candidate] aim_on_breadcrumbs__calib_reasoning/general: activations=(36, 128, 4096)
+[candidate] aim_on_breadcrumbs__calib_reasoning/instruction: activations=(36, 128, 4096)
+[candidate] aim_on_breadcrumbs__calib_reasoning/reasoning: activations=(36, 128, 4096)
+[candidate] aim_on_breadcrumbs__calib_reasoning/uncensored_refusal_like: activations=(36, 128, 4096)
+[scores] aim_on_breadcrumbs__calib_reasoning: results/activation_metrics/model_scores/aim_on_breadcrumbs__calib_reasoning.csv rows=1152

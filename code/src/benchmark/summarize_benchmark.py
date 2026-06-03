@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Summarize outputs from the frozen custom benchmark protocol."""
+"""Summarize final benchmark results or one-time selection benchmark results."""
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import sys
@@ -14,19 +15,23 @@ SRC_ROOT = Path(__file__).resolve().parents[1]
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from common.io import file_sha256, project_path, read_yaml
 from benchmark.common import (
     BENCHMARK_CONFIG,
+    BENCHMARK_FORGETTING_CSV,
+    BENCHMARK_MAIN_CSV,
+    BENCHMARK_RESULTS_ROOT,
+    BENCHMARK_RUNS_JSON,
+    BENCHMARK_TASKS_CSV,
     BUNDLES_CONFIG,
-    FORGETTING_CSV,
-    MAIN_CSV,
     PROJECT_ROOT,
-    RESULTS_ROOT,
-    RUNS_JSON,
-    TASKS_CSV,
+    SELECTION_CONFIG,
+    SELECTION_MAIN_CSV,
+    SELECTION_RESULTS_ROOT,
     enabled_axes,
+    selection_benchmark_section,
     task_entries,
 )
+from common.io import file_sha256, project_path, read_yaml
 
 
 def load_jsons(root: Path) -> list[tuple[Path, Any]]:
@@ -35,9 +40,7 @@ def load_jsons(root: Path) -> list[tuple[Path, Any]]:
         return out
     for path in root.rglob("*.json"):
         name = path.name.lower()
-        if name == "run_manifest.json":
-            continue
-        if "generation" in name or "sample" in name:
+        if name == "run_manifest.json" or "generation" in name or "sample" in name:
             continue
         try:
             with path.open("r", encoding="utf-8") as f:
@@ -61,10 +64,10 @@ def get_nested(obj: dict[str, Any], dotted_key: str) -> Any:
 
 
 def get_metric_value(metrics: dict[str, Any], metric_key: str) -> float | None:
-    candidate_keys = [metric_key]
+    keys = [metric_key]
     if "," not in metric_key:
-        candidate_keys.append(f"{metric_key},none")
-    for key in candidate_keys:
+        keys.append(f"{metric_key},none")
+    for key in keys:
         val = metrics.get(key)
         if val is None and "." in key:
             val = get_nested(metrics, key)
@@ -85,271 +88,365 @@ def normalize_score(score: float | None, task_cfg: dict[str, Any]) -> float | No
     return 1.0 - score if invert else score
 
 
-def find_task_score(axis_dir: Path, task_cfg: dict[str, Any]) -> tuple[float | None, float | None]:
+def find_task_score(result_dir: Path, task_cfg: dict[str, Any]) -> tuple[float | None, float | None]:
     task_id = str(task_cfg["task_id"])
     runner_task_name = str(task_cfg.get("runner_task_name") or task_id)
     metric_key = str(task_cfg.get("metric") or "")
     if not metric_key:
         raise ValueError(f"Task {task_id} must define an explicit metric key")
-    jsons = load_jsons(axis_dir)
-    names = {task_id, runner_task_name}
-    for path, data in jsons:
+
+    for _, data in load_jsons(result_dir):
         if isinstance(data, dict) and isinstance(data.get("results"), dict):
-            for name in names:
+            for name in {task_id, runner_task_name}:
                 if isinstance(data["results"].get(name), dict):
-                    raw_score = get_metric_value(data["results"][name], metric_key)
-                    score = normalize_score(raw_score, task_cfg)
+                    raw = get_metric_value(data["results"][name], metric_key)
+                    score = normalize_score(raw, task_cfg)
                     if score is not None:
-                        return score, raw_score
+                        return score, raw
         if isinstance(data, dict):
-            for name in names:
+            for name in {task_id, runner_task_name}:
                 if isinstance(data.get(name), dict):
-                    raw_score = get_metric_value(data[name], metric_key)
-                    score = normalize_score(raw_score, task_cfg)
+                    raw = get_metric_value(data[name], metric_key)
+                    score = normalize_score(raw, task_cfg)
                     if score is not None:
-                        return score, raw_score
+                        return score, raw
     return None, None
 
 
-def load_run_manifest(model_dir: Path) -> tuple[dict[str, Any], list[str], list[str]]:
-    p = model_dir / "run_manifest.json"
-    if not p.exists():
+def load_manifest(model_dir: Path) -> tuple[dict[str, Any], list[str], list[str]]:
+    path = model_dir / "run_manifest.json"
+    if not path.exists():
         return {}, [], [f"missing run_manifest.json in {project_path(model_dir, PROJECT_ROOT)}"]
     try:
-        with p.open("r", encoding="utf-8") as f:
-            data = json.load(f)
+        with path.open("r", encoding="utf-8") as f:
+            manifest = json.load(f)
     except Exception as exc:
         return {}, [], [f"could not read run_manifest.json in {project_path(model_dir, PROJECT_ROOT)}: {exc!r}"]
-    if not isinstance(data, dict):
-        return {}, [], [f"run_manifest.json is not a JSON object: {project_path(p, PROJECT_ROOT)}"]
-    return data, [], []
+    if not isinstance(manifest, dict):
+        return {}, [], [f"run_manifest.json is not a JSON object: {project_path(path, PROJECT_ROOT)}"]
+    return manifest, [], []
 
 
-def validate_manifest(model_dir: Path, manifest: dict[str, Any], current_config_hash: str) -> tuple[list[str], list[str]]:
+def common_manifest_errors(manifest: dict[str, Any], current_config_hash: str) -> tuple[list[str], list[str]]:
     warnings: list[str] = []
-    validation_errors: list[str] = []
+    errors: list[str] = []
     if not manifest:
-        return warnings, validation_errors
-    if manifest.get("exit_code") != 0:
-        validation_errors.append(f"run_manifest exit_code={manifest.get('exit_code')}")
-    for warning in manifest.get("warnings", []) or []:
-        warnings.append(str(warning))
-    manifest_hash = manifest.get("benchmark_config_sha256")
-    if manifest_hash != current_config_hash:
-        validation_errors.append("benchmark_config_sha256 differs from current benchmark.yaml")
-    axis_runs = manifest.get("axis_runs", [])
-    if not isinstance(axis_runs, list) or not axis_runs:
-        validation_errors.append("no benchmark axis runs recorded in run_manifest")
-    for entry in axis_runs if isinstance(axis_runs, list) else []:
-        if isinstance(entry, dict) and entry.get("exit_code") not in {0, None}:
-            validation_errors.append(f"axis {entry.get('axis')} previously failed with exit_code={entry.get('exit_code')}")
+        return warnings, errors
+    if manifest.get("exit_code") not in {0, None}:
+        errors.append(f"run_manifest exit_code={manifest.get('exit_code')}")
+    if manifest.get("benchmark_config_sha256") != current_config_hash:
+        errors.append("benchmark_config_sha256 differs from current benchmark config")
+    warnings.extend(str(w) for w in manifest.get("warnings", []) or [])
+
     identity = manifest.get("model_identity", {})
     if isinstance(identity, dict) and identity.get("kind") == "local_checkpoint":
         local_manifest = identity.get("local_model_manifest", {})
         if not isinstance(local_manifest, dict) or not local_manifest.get("manifest"):
-            validation_errors.append("local checkpoint has no readable merge_manifest.json")
-    return warnings, validation_errors
+            errors.append("local checkpoint has no readable merge_manifest.json")
+    return warnings, errors
 
 
-def summarize_model(model_dir: Path, benchmark_cfg: dict[str, Any], current_config_hash: str) -> dict[str, Any]:
-    manifest, warnings, validation_errors = load_run_manifest(model_dir)
-    manifest_warnings, manifest_errors = validate_manifest(model_dir, manifest, current_config_hash)
+def validate_final_manifest(manifest: dict[str, Any], current_config_hash: str) -> tuple[list[str], list[str]]:
+    warnings, errors = common_manifest_errors(manifest, current_config_hash)
+    axis_runs = manifest.get("axis_runs", [])
+    if not isinstance(axis_runs, list) or not axis_runs:
+        errors.append("no benchmark axes recorded in run_manifest")
+    for entry in axis_runs if isinstance(axis_runs, list) else []:
+        if isinstance(entry, dict) and entry.get("exit_code") not in {0, None}:
+            errors.append(f"axis {entry.get('axis')} previously failed with exit_code={entry.get('exit_code')}")
+    return warnings, errors
+
+
+def validate_selection_manifest(manifest: dict[str, Any], current_config_hash: str) -> tuple[list[str], list[str]]:
+    warnings, errors = common_manifest_errors(manifest, current_config_hash)
+    selection_run = manifest.get("selection_run")
+    if not isinstance(selection_run, dict):
+        errors.append("no selection_run recorded in run_manifest")
+    elif selection_run.get("exit_code") not in {0, None}:
+        errors.append(f"selection benchmark previously failed with exit_code={selection_run.get('exit_code')}")
+    return warnings, errors
+
+
+def summarize_final_model(model_dir: Path, benchmark_cfg: dict[str, Any], current_config_hash: str) -> dict[str, Any]:
+    manifest, warnings, errors = load_manifest(model_dir)
+    manifest_warnings, manifest_errors = validate_final_manifest(manifest, current_config_hash)
     warnings.extend(manifest_warnings)
-    validation_errors.extend(manifest_errors)
-    axes_cfg = enabled_axes(benchmark_cfg)
+    errors.extend(manifest_errors)
+
     task_scores: dict[str, float | None] = {}
     raw_task_scores: dict[str, float | None] = {}
     axis_scores: dict[str, float | None] = {}
+    missing_tasks: list[str] = []
+    axes_cfg = enabled_axes(benchmark_cfg)
 
     for axis_id, axis_cfg in axes_cfg.items():
         scores: list[float] = []
-        axis_dir = model_dir / axis_id
         for task in task_entries(axis_cfg, require_metric=True):
-            score, raw_score = find_task_score(axis_dir, task)
-            task_key = f"{axis_id}/{task['task_id']}"
-            task_scores[task_key] = score
-            raw_task_scores[task_key] = raw_score
+            score, raw = find_task_score(model_dir / axis_id, task)
+            key = f"{axis_id}/{task['task_id']}"
+            task_scores[key] = score
+            raw_task_scores[key] = raw
             if score is not None:
                 scores.append(score)
+            else:
+                missing_tasks.append(key)
         axis_scores[axis_id] = mean(scores) if scores else None
 
     aggregate_axes = benchmark_cfg.get("aggregate", {}).get("axes", list(axes_cfg.keys()))
     missing_axes = [a for a in aggregate_axes if axis_scores.get(a) is None]
-    aggregate = mean(axis_scores[a] for a in aggregate_axes) if not missing_axes else None
-
+    if missing_tasks:
+        errors.append("missing benchmark tasks: " + ", ".join(missing_tasks))
     if missing_axes:
-        validation_errors.append("missing aggregate axes: " + ", ".join(missing_axes))
+        errors.append("missing aggregate axes: " + ", ".join(missing_axes))
+    aggregate = mean(axis_scores[a] for a in aggregate_axes) if not missing_axes and not missing_tasks else None
 
-    valid_run = not missing_axes and not validation_errors
     return {
         "config_id": model_dir.name,
-        "valid_run": valid_run,
-        "validation_errors": validation_errors,
+        "valid_run": not errors,
+        "validation_errors": errors,
         "warnings": warnings,
         "task_scores": task_scores,
         "raw_task_scores": raw_task_scores,
         "axis_scores": axis_scores,
         "aggregate": aggregate,
-        "run_manifest_path": project_path(model_dir / "run_manifest.json", PROJECT_ROOT) if (model_dir / "run_manifest.json").exists() else None,
+    }
+
+
+def summarize_selection_model(model_dir: Path, benchmark_cfg: dict[str, Any], current_config_hash: str) -> dict[str, Any]:
+    manifest, warnings, errors = load_manifest(model_dir)
+    manifest_warnings, manifest_errors = validate_selection_manifest(manifest, current_config_hash)
+    warnings.extend(manifest_warnings)
+    errors.extend(manifest_errors)
+
+    task_scores: dict[str, float | None] = {}
+    scores: list[float] = []
+    for task in task_entries(selection_benchmark_section(benchmark_cfg), require_metric=True):
+        task_id = str(task["task_id"])
+        score, _ = find_task_score(model_dir / "selection", task)
+        task_scores[task_id] = score
+        if score is not None:
+            scores.append(score)
+
+    missing_tasks = [task_id for task_id, score in task_scores.items() if score is None]
+    if missing_tasks:
+        errors.append("missing selection benchmark tasks: " + ", ".join(missing_tasks))
+    aggregate = mean(scores) if scores and not missing_tasks else None
+
+    return {
+        "config_id": model_dir.name,
+        "valid_run": not errors,
+        "validation_errors": errors,
+        "warnings": warnings,
+        "task_scores": task_scores,
+        "aggregate": aggregate,
     }
 
 
 def bundle_score(summary: dict[str, Any] | None, bundle: dict[str, Any]) -> float | None:
     if summary is None or not summary.get("valid_run", False):
         return None
-    vals: list[float] = []
+    values: list[float] = []
     default_source = str(bundle.get("score_source", "task_scores"))
-    for t in bundle.get("tasks", []):
-        key = f"{t['axis']}/{t['task_id']}"
-        score_source = str(t.get("score_source", default_source))
-        if score_source not in {"task_scores", "raw_task_scores"}:
-            raise ValueError(f"Unsupported score_source={score_source!r} for bundle task {key}")
-        val = summary.get(score_source, {}).get(key)
-        if val is not None:
-            vals.append(float(val))
-    return mean(vals) if vals else None
+    for task in bundle.get("tasks", []):
+        key = f"{task['axis']}/{task['task_id']}"
+        source = str(task.get("score_source", default_source))
+        if source not in {"task_scores", "raw_task_scores"}:
+            raise ValueError(f"Unsupported score_source={source!r} for bundle task {key}")
+        value = summary.get(source, {}).get(key)
+        if value is None:
+            return None
+        values.append(float(value))
+    return mean(values) if values else None
 
 
 def add_forgetting(summaries: dict[str, dict[str, Any]], bundles_cfg: dict[str, Any]) -> list[dict[str, Any]]:
-    bundles = bundles_cfg.get("bundles", {})
-    forgetting_rows: list[dict[str, Any]] = []
-    enabled_bundles = {k: v for k, v in bundles.items() if v.get("enabled", False)}
-    missing_specialists = sorted(
-        str(v.get("specialist_id")) for v in enabled_bundles.values() if v.get("specialist_id") not in summaries
-    )
-    if missing_specialists:
-        msg = "missing specialist result folders required for forgetting: " + ", ".join(missing_specialists)
+    rows: list[dict[str, Any]] = []
+    bundles = {k: v for k, v in bundles_cfg.get("bundles", {}).items() if v.get("enabled", False)}
+    missing = sorted(str(v.get("specialist_id")) for v in bundles.values() if v.get("specialist_id") not in summaries)
+    if missing:
+        msg = "missing specialist result folders required for forgetting: " + ", ".join(missing)
         for summary in summaries.values():
             summary.setdefault("warnings", []).append(msg)
 
     for model_id, summary in summaries.items():
         forgetting: dict[str, float | None] = {}
-        for bundle_id, bundle in enabled_bundles.items():
-            specialist_id = bundle.get("specialist_id")
-            specialist_summary = summaries.get(str(specialist_id))
-            spec_score = bundle_score(specialist_summary, bundle)
-            merged_score = bundle_score(summary, bundle)
-            value = None if spec_score is None or merged_score is None else spec_score - merged_score
+        for bundle_id, bundle in bundles.items():
+            specialist_id = str(bundle.get("specialist_id"))
+            spec_score = bundle_score(summaries.get(specialist_id), bundle)
+            model_score = bundle_score(summary, bundle)
+            value = None if spec_score is None or model_score is None else spec_score - model_score
             forgetting[bundle_id] = value
-            forgetting_rows.append(
+            rows.append(
                 {
                     "Config id": model_id,
                     "Domain (i)": bundle_id,
                     "Specialist id": specialist_id,
                     "Specialist score": spec_score,
-                    "Merged/model score": merged_score,
+                    "Merged/model score": model_score,
                     "F_i": value,
                 }
             )
-        vals = [v for v in forgetting.values() if v is not None]
+        values = [v for v in forgetting.values() if v is not None]
         summary["forgetting"] = forgetting
-        summary["max_forgetting"] = max(vals) if vals else None
-        summary["mean_forgetting"] = mean(vals) if vals else None
-    return forgetting_rows
+        summary["max_forgetting"] = max(values) if values else None
+        summary["mean_forgetting"] = mean(values) if values else None
+    return rows
 
 
-def write_tasks_csv(path: Path, rows: list[dict[str, Any]], benchmark_cfg: dict[str, Any]) -> None:
+def notes(row: dict[str, Any]) -> str:
+    return "; ".join(row.get("validation_errors", []) + row.get("warnings", []))
+
+
+def write_final_runs_json(rows: list[dict[str, Any]]) -> None:
+    BENCHMARK_RUNS_JSON.parent.mkdir(parents=True, exist_ok=True)
+    with BENCHMARK_RUNS_JSON.open("w", encoding="utf-8") as f:
+        json.dump(rows, f, ensure_ascii=True, indent=2)
+
+
+def write_final_tasks_csv(rows: list[dict[str, Any]], benchmark_cfg: dict[str, Any]) -> None:
     axes = list(enabled_axes(benchmark_cfg).keys())
-    task_keys: list[str] = []
-    for axis_id, axis_cfg in enabled_axes(benchmark_cfg).items():
-        for task in task_entries(axis_cfg, require_metric=True):
-            task_keys.append(f"{axis_id}/{task['task_id']}")
-    forgetting_keys = sorted({k for r in rows for k in r.get("forgetting", {}).keys()})
+    task_keys = [
+        f"{axis_id}/{task['task_id']}"
+        for axis_id, axis_cfg in enabled_axes(benchmark_cfg).items()
+        for task in task_entries(axis_cfg, require_metric=True)
+    ]
+    forgetting_keys = sorted({k for row in rows for k in row.get("forgetting", {}).keys()})
     fields = ["config_id", "valid_run", "notes", "aggregate"]
     fields += [f"axis:{a}" for a in axes]
     fields += [f"task:{t}" for t in task_keys]
     fields += [f"raw_task:{t}" for t in task_keys]
     fields += [f"forgetting:{k}" for k in forgetting_keys] + ["max_forgetting", "mean_forgetting"]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="") as f:
+
+    BENCHMARK_TASKS_CSV.parent.mkdir(parents=True, exist_ok=True)
+    with BENCHMARK_TASKS_CSV.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
-        for r in rows:
+        for row in rows:
             flat = {
-                "config_id": r["config_id"],
-                "valid_run": r.get("valid_run"),
-                "notes": "; ".join(r.get("validation_errors", []) + r.get("warnings", [])),
-                "aggregate": r.get("aggregate"),
+                "config_id": row["config_id"],
+                "valid_run": row.get("valid_run"),
+                "notes": notes(row),
+                "aggregate": row.get("aggregate"),
             }
-            for a in axes:
-                flat[f"axis:{a}"] = r.get("axis_scores", {}).get(a)
-            for t in task_keys:
-                flat[f"task:{t}"] = r.get("task_scores", {}).get(t)
-                flat[f"raw_task:{t}"] = r.get("raw_task_scores", {}).get(t)
-            for k in forgetting_keys:
-                flat[f"forgetting:{k}"] = r.get("forgetting", {}).get(k)
-            flat["max_forgetting"] = r.get("max_forgetting")
-            flat["mean_forgetting"] = r.get("mean_forgetting")
+            for axis in axes:
+                flat[f"axis:{axis}"] = row.get("axis_scores", {}).get(axis)
+            for task_key in task_keys:
+                flat[f"task:{task_key}"] = row.get("task_scores", {}).get(task_key)
+                flat[f"raw_task:{task_key}"] = row.get("raw_task_scores", {}).get(task_key)
+            for key in forgetting_keys:
+                flat[f"forgetting:{key}"] = row.get("forgetting", {}).get(key)
+            flat["max_forgetting"] = row.get("max_forgetting")
+            flat["mean_forgetting"] = row.get("mean_forgetting")
             writer.writerow(flat)
 
 
-def write_main_csv(path: Path, rows: list[dict[str, Any]]) -> None:
-    fields = ["Config id", "Valid run", "Notes", "Aggregate", "IF", "Reasoning", "Safety", "Max F_i", "Mean F_i"]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="") as f:
+def write_final_main_csv(rows: list[dict[str, Any]]) -> None:
+    axis_labels = {
+        "instruction_following": "IF",
+        "safety": "Safety",
+    }
+    axis_ids: list[str] = []
+    for row in rows:
+        axis_scores = row.get("axis_scores", {})
+        if isinstance(axis_scores, dict):
+            for axis_id in axis_scores:
+                if axis_id not in axis_ids:
+                    axis_ids.append(str(axis_id))
+
+    axis_fields = [axis_labels.get(axis_id, axis_id) for axis_id in axis_ids]
+    fields = ["Config id", "Valid run", "Notes", "Aggregate"] + axis_fields + ["Max F_i", "Mean F_i"]
+    BENCHMARK_MAIN_CSV.parent.mkdir(parents=True, exist_ok=True)
+    with BENCHMARK_MAIN_CSV.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
-        for r in rows:
-            axis = r.get("axis_scores", {})
-            writer.writerow(
-                {
-                    "Config id": r.get("config_id"),
-                    "Valid run": r.get("valid_run"),
-                    "Notes": "; ".join(r.get("validation_errors", []) + r.get("warnings", [])),
-                    "Aggregate": r.get("aggregate"),
-                    "IF": axis.get("instruction_following"),
-                    "Reasoning": axis.get("reasoning_math"),
-                    "Safety": axis.get("safety"),
-                    "Max F_i": r.get("max_forgetting"),
-                    "Mean F_i": r.get("mean_forgetting"),
-                }
-            )
+        for row in rows:
+            axis = row.get("axis_scores", {})
+            out = {
+                "Config id": row.get("config_id"),
+                "Valid run": row.get("valid_run"),
+                "Notes": notes(row),
+                "Aggregate": row.get("aggregate"),
+                "Max F_i": row.get("max_forgetting"),
+                "Mean F_i": row.get("mean_forgetting"),
+            }
+            if isinstance(axis, dict):
+                for axis_id in axis_ids:
+                    out[axis_labels.get(axis_id, axis_id)] = axis.get(axis_id)
+            writer.writerow(out)
 
-
-def write_forgetting_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+def write_forgetting_csv(rows: list[dict[str, Any]]) -> None:
     fields = ["Config id", "Domain (i)", "F_i", "Specialist id", "Specialist score", "Merged/model score"]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="") as f:
+    BENCHMARK_FORGETTING_CSV.parent.mkdir(parents=True, exist_ok=True)
+    with BENCHMARK_FORGETTING_CSV.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
-        for r in rows:
-            writer.writerow({k: r.get(k) for k in fields})
+        for row in rows:
+            writer.writerow({k: row.get(k) for k in fields})
 
 
-def main() -> int:
+def write_selection_csv(rows: list[dict[str, Any]], benchmark_cfg: dict[str, Any]) -> None:
+    task_ids = [str(task["task_id"]) for task in selection_benchmark_section(benchmark_cfg, require_metric=True)["tasks"]]
+    fields = ["Config id", "Valid run", "Notes", "Aggregate"] + [f"task:{task_id}" for task_id in task_ids]
+    SELECTION_MAIN_CSV.parent.mkdir(parents=True, exist_ok=True)
+    with SELECTION_MAIN_CSV.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        for row in rows:
+            out = {
+                "Config id": row.get("config_id"),
+                "Valid run": row.get("valid_run"),
+                "Notes": notes(row),
+                "Aggregate": row.get("aggregate"),
+            }
+            for task_id in task_ids:
+                out[f"task:{task_id}"] = row.get("task_scores", {}).get(task_id)
+            writer.writerow(out)
+
+
+def summarize_final() -> int:
     benchmark_cfg = read_yaml(BENCHMARK_CONFIG)
     current_hash = file_sha256(BENCHMARK_CONFIG)
-    if not RESULTS_ROOT.exists():
-        raise FileNotFoundError(f"results root does not exist: {project_path(RESULTS_ROOT, PROJECT_ROOT)}")
+    if not BENCHMARK_RESULTS_ROOT.exists():
+        raise FileNotFoundError(f"results root does not exist: {project_path(BENCHMARK_RESULTS_ROOT, PROJECT_ROOT)}")
 
-    summaries: dict[str, dict[str, Any]] = {}
-    for model_dir in sorted(p for p in RESULTS_ROOT.iterdir() if p.is_dir()):
-        summaries[model_dir.name] = summarize_model(model_dir, benchmark_cfg, current_hash)
-
-    invalid = [s for s in summaries.values() if not s.get("valid_run", False)]
-    if invalid:
-        print("[warning] incomplete benchmark run(s) found; summary will still be written:")
-        for s in invalid:
-            messages = s.get("validation_errors", []) + s.get("warnings", [])
-            print(f"[warning] - {s['config_id']}: {'; '.join(messages) or 'no parseable aggregate'}")
-
-    bundles_cfg = read_yaml(BUNDLES_CONFIG)
-    forgetting_rows = add_forgetting(summaries, bundles_cfg)
+    summaries = {
+        model_dir.name: summarize_final_model(model_dir, benchmark_cfg, current_hash)
+        for model_dir in sorted(p for p in BENCHMARK_RESULTS_ROOT.iterdir() if p.is_dir())
+    }
+    forgetting_rows = add_forgetting(summaries, read_yaml(BUNDLES_CONFIG))
     rows = [summaries[k] for k in sorted(summaries)]
 
-    RUNS_JSON.parent.mkdir(parents=True, exist_ok=True)
-    with RUNS_JSON.open("w", encoding="utf-8") as f:
-        json.dump(rows, f, ensure_ascii=True, indent=2)
-    write_tasks_csv(TASKS_CSV, rows, benchmark_cfg)
-    write_main_csv(MAIN_CSV, rows)
-    write_forgetting_csv(FORGETTING_CSV, forgetting_rows)
-
-    print(f"[done] wrote {project_path(RUNS_JSON, PROJECT_ROOT)}")
-    print(f"[done] wrote {project_path(TASKS_CSV, PROJECT_ROOT)}")
-    print(f"[done] wrote {project_path(MAIN_CSV, PROJECT_ROOT)}")
-    print(f"[done] wrote {project_path(FORGETTING_CSV, PROJECT_ROOT)}")
+    write_final_runs_json(rows)
+    write_final_tasks_csv(rows, benchmark_cfg)
+    write_final_main_csv(rows)
+    write_forgetting_csv(forgetting_rows)
+    for path in [BENCHMARK_RUNS_JSON, BENCHMARK_TASKS_CSV, BENCHMARK_MAIN_CSV, BENCHMARK_FORGETTING_CSV]:
+        print(f"[done] wrote {project_path(path, PROJECT_ROOT)}")
     return 0
 
 
+def summarize_selection() -> int:
+    benchmark_cfg = read_yaml(SELECTION_CONFIG)
+    selection_benchmark_section(benchmark_cfg, require_metric=True)
+    current_hash = file_sha256(SELECTION_CONFIG)
+    if not SELECTION_RESULTS_ROOT.exists():
+        raise FileNotFoundError(f"results root does not exist: {project_path(SELECTION_RESULTS_ROOT, PROJECT_ROOT)}")
+
+    rows = [
+        summarize_selection_model(model_dir, benchmark_cfg, current_hash)
+        for model_dir in sorted(p for p in SELECTION_RESULTS_ROOT.iterdir() if p.is_dir())
+    ]
+    write_selection_csv(rows, benchmark_cfg)
+    print(f"[done] wrote {project_path(SELECTION_MAIN_CSV, PROJECT_ROOT)}")
+    return 0
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Summarize benchmark results")
+    parser.add_argument("--selection", action="store_true", help="summarize one-time selection benchmark results")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    args = parse_args()
+    raise SystemExit(summarize_selection() if args.selection else summarize_final())

@@ -1,0 +1,388 @@
+{
+  "config_id": "aim_on_dare__calib_general",
+  "model": "outputs/merged/aim_on_dare__calib_general",
+  "model_identity": {
+    "kind": "local_checkpoint",
+    "input_model": "outputs/merged/aim_on_dare__calib_general",
+    "configured_revision": null,
+    "local_model_manifest": {
+      "manifest": {
+        "config_id": "aim_on_dare__calib_general",
+        "baseline_id": "aim_on_dare__calib_general",
+        "method_family": "AIM",
+        "variant": "aim_post_merge",
+        "calibration_id": "general",
+        "parent_config_id": "dare_best",
+        "parent_checkpoint": "outputs/merged/dare_best",
+        "parent_manifest": "outputs/merged/dare_best/merge_manifest.json",
+        "parent_manifest_sha256": "27e2c4e82c663a5d545d657525bf8f0468877aa8104e34d8579e8737ccc5054d",
+        "base_model": {
+          "alias": "base",
+          "repo": "Qwen/Qwen3-8B-Base",
+          "revision": "49e3418fbbbca6ecbdf9608b4d22e5a407081db4"
+        },
+        "source_models": [
+          {
+            "alias": "instr_only",
+            "repo": "Qwen/Qwen3-8B",
+            "revision": "b968826d9c46dd6066d109eabc6255188de91218"
+          },
+          {
+            "alias": "reasoning_only",
+            "repo": "OpenDataArena/Qwen3-8B-ODA-Math-460k",
+            "revision": "8e8758ee23e5d959dd844b3bb5c5344219544795"
+          },
+          {
+            "alias": "uncensored_only",
+            "repo": "mlabonne/Qwen3-8B-abliterated",
+            "revision": "30c72fa348f37c72d12ecbb259068ddee98aa9ed"
+          }
+        ],
+        "calibration_corpus": "data/calibration/calib_general.jsonl",
+        "calibration_corpus_sha256": "6540f9aba0cec73a0fcecde5c7b0d26d5ccbc835492964210221fecb18796a31",
+        "calibration_manifest": "data/calibration/calibration_manifest.json",
+        "calibration_manifest_sha256": "b78865d8f184bba82be51575b3165cd0bdf292029e4d4d7d61a635e79b4d9eef",
+        "non_overlap_report": "data/calibration/non_overlap_report.json",
+        "non_overlap_report_sha256": "e9784ffcb17932367ec8c8f8c0ce84a78c61d61aa86ac5e88865b15818979515",
+        "aim_repo": "external/ActivationInformedMerging",
+        "aim_commit": "e7eccd573d010da13dc6f795a23a36f9822851c9",
+        "aim_patch_script": "code/patches/activation_informed_merging/apply_local_calibration_patch.py",
+        "aim_patch_script_sha256": "b1f0d5d2aead41d1b750af5c5f5475a2ad5476b2f7bfcc6b81e5a1e42d40b9ad",
+        "omega": 0.4,
+        "device": "cuda",
+        "dtype": "bfloat16",
+        "run": {
+          "exit_code": 0
+        }
+      },
+      "warnings": []
+    },
+    "local_checkpoint_files_sha256": {
+      "added_tokens.json": {
+        "size_bytes": 707,
+        "sha256": "c0284b582e14987fbd3d5a2cb2bd139084371ed9acbae488829a1c900833c680"
+      },
+      "config.json": {
+        "size_bytes": 1544,
+        "sha256": "8d041dedf97672e603d913099de7bede400b728acf91769448811c236b901ddd"
+      },
+      "generation_config.json": {
+        "size_bytes": 121,
+        "sha256": "db58abbaab45faaa8f772d584b8d7cdc60a72cce5321af1117ce31fc5a4c10bb"
+      },
+      "merge_manifest.json": {
+        "size_bytes": 1950,
+        "sha256": "7650a14a8f9b5483162ec76f825f080549ab16ff85975bd30078add1f66df002"
+      },
+      "merges.txt": {
+        "size_bytes": 1671853,
+        "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+      },
+      "model-00001-of-00004.safetensors": {
+        "size_bytes": 4902257696,
+        "sha256": "d57a8ff320dd24e4ab8f9dc1ef182b6bc004bdca2e61b59a1a7eb18ed4a969e4"
+      },
+      "model-00002-of-00004.safetensors": {
+        "size_bytes": 4915960368,
+        "sha256": "8ecafbc6900b104c72b251bb63ce6f2361515a00b470aa1f57ac549a61efc2c3"
+      },
+      "model-00003-of-00004.safetensors": {
+        "size_bytes": 4983068496,
+        "sha256": "aeeca0c959b0221f1099e0831453460398283a445130cf46d7251e13b97842b3"
+      },
+      "model-00004-of-00004.safetensors": {
+        "size_bytes": 1580230264,
+        "sha256": "48a80ee4c0ed76506af91e3e5ea5bcf150fa6932916f263962441e26ab339818"
+      },
+      "model.safetensors.index.json": {
+        "size_bytes": 32914,
+        "sha256": "e7e4bdc58d3302c97357f27979b270987dd620cf0cd9b1c130e3a51c9d64df95"
+      },
+      "special_tokens_map.json": {
+        "size_bytes": 616,
+        "sha256": "6676f091c8bc4d1b50146427cfde92073402866b87b6e39223227931b70083e9"
+      },
+      "tokenizer.json": {
+        "size_bytes": 11422654,
+        "sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+      },
+      "tokenizer_config.json": {
+        "size_bytes": 5407,
+        "sha256": "67e5a0a11cd35f9c00ee52e0af4cdc0baa75fea0cb5fce7d1beb251b4621d15c"
+      },
+      "upload_complete.json": {
+        "size_bytes": 434,
+        "sha256": "b1b4692b5ac39f7fd1eea59f0db97651e1bcac67a79e920c78fdadf98906f79f"
+      },
+      "vocab.json": {
+        "size_bytes": 2776833,
+        "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+      }
+    }
+  },
+  "benchmark_config": "code/cfg/benchmark/benchmark.yaml",
+  "benchmark_config_sha256": "59a67bce1342f794e1b1f1f81f350d3591b7726f5a18062ca0dd64679723acf5",
+  "benchmark_id": "qwen3_8b_benchmark_min",
+  "chat_format": {
+    "lm_eval_apply_chat_template": true,
+    "lm_eval_model_args": {
+      "dtype": "bfloat16",
+      "enable_thinking": false
+    }
+  },
+  "effective_chat_format": {
+    "lm_eval_apply_chat_template": true,
+    "lm_eval_model_args": {
+      "dtype": "bfloat16",
+      "enable_thinking": false
+    }
+  },
+  "gpu_ids": "0",
+  "gpu_count": 1,
+  "started_at_utc": "2026-05-24T21:41:40.005065+00:00",
+  "environment": {
+    "python": "3.12.13 (main, Mar  4 2026, 09:23:07) [GCC 11.4.0]",
+    "platform": "Linux-6.6.122+-x86_64-with-glibc2.35",
+    "lm_eval_bin": "lm_eval",
+    "lm_eval_bin_version": "usage: lm-eval [-h] COMMAND ...",
+    "pyyaml": "6.0.1",
+    "torch": "2.7.0",
+    "transformers": "4.53.3",
+    "accelerate": "1.13.0",
+    "datasets": "2.19.0",
+    "huggingface_hub": "0.36.2",
+    "lm_eval": "0.4.11",
+    "nvidia_driver": "580.82.07",
+    "vllm": "0.9.2",
+    "safety_eval_commit": "2920bb85a8a8390144b9256f697395f81b94822e",
+    "safety_eval_git_status_short": "M src/generation_utils.py\n?? evaluation/__pycache__/\n?? evaluation/models/__pycache__/\n?? evaluation/tasks/__pycache__/\n?? evaluation/tasks/generation/__pycache__/\n?? evaluation/tasks/generation/do_anything_now/__pycache__/\n?? evaluation/tasks/generation/harmbench/__pycache__/\n?? evaluation/tasks/generation/wildguardtest/__pycache__/\n?? evaluation/tasks/generation/xstest/__pycache__/\n?? src/__pycache__/\n?? src/classifier_models/__pycache__/\n?? src/templates/__pycache__/",
+    "safety_eval_tracked_diff_sha256": "14237372203497f4b0133096956bc6a017e2c1c8fa90d68b721d7b3b12e4cfb7",
+    "safety_eval_tracked_diff": "diff --git a/src/generation_utils.py b/src/generation_utils.py\nindex 181f23a..3f257b0 100644\n--- a/src/generation_utils.py\n+++ b/src/generation_utils.py\n@@ -496,6 +496,7 @@ def load_vllm_model(model_name_or_path,\n         tensor_parallel_size=num_devices,\n         tokenizer_mode=tokenizer_mode,\n         trust_remote_code=trust_remote_code,\n+        max_model_len=4096,\n     )\n     return model\n \n",
+    "torch_cuda_available": true,
+    "torch_cuda_version": "12.6",
+    "gpu_count": 1,
+    "gpus": [
+      {
+        "gpu_id": 0,
+        "gpu_name": "NVIDIA A100-SXM4-80GB",
+        "gpu_total_memory_gb": 79.25
+      }
+    ]
+  },
+  "warnings": [],
+  "safety_eval_template": {
+    "source": "generated_from_evaluated_model_tokenizer",
+    "path": ".cache/benchmark_templates/qwen3_no_think__202549a1c6d6.txt",
+    "sha256": "202549a1c6d6802423bdce2e4e73fcd7543dcf8ce5b37948765562a33005019d",
+    "enable_thinking": false,
+    "enable_thinking_arg_present": true,
+    "add_generation_prompt": true
+  },
+  "safety_eval_dataset_pins": [
+    {
+      "dataset": "allenai/wildguardmix",
+      "name": "wildguardtest",
+      "revision": "ea7fa769fec91855ec3ada77ce556068cffe85b7"
+    }
+  ],
+  "axis_runs": [
+    {
+      "axis": "instruction_following",
+      "axis_part": 1,
+      "axis_parts": 1,
+      "evaluator": "lm_eval",
+      "tasks": [
+        {
+          "task_id": "ifeval",
+          "metric": "prompt_level_strict_acc",
+          "runner_task_name": "ifeval"
+        }
+      ],
+      "effective_chat_format": {
+        "lm_eval_apply_chat_template": true,
+        "lm_eval_model_args": {
+          "dtype": "bfloat16",
+          "enable_thinking": false
+        }
+      },
+      "effective_axis_config": {
+        "batch_size": 4,
+        "lm_eval_backend": "vllm",
+        "log_samples": true,
+        "vllm_batch_size": "auto",
+        "vllm_model_args": {
+          "tensor_parallel_size": 1,
+          "gpu_memory_utilization": 0.9,
+          "max_model_len": 4096,
+          "enforce_eager": false
+        }
+      },
+      "exit_code": 0
+    },
+    {
+      "axis": "reasoning_math",
+      "axis_part": 1,
+      "axis_parts": 2,
+      "evaluator": "lm_eval",
+      "tasks": [
+        {
+          "task_id": "gsm8k_cot_boxed",
+          "runner_task_name": "code/cfg/benchmark/lm_eval_tasks/gsm8k_cot_boxed.yaml",
+          "metric": "exact_match,flexible-extract",
+          "denylist_source": "gsm8k"
+        }
+      ],
+      "effective_chat_format": {
+        "lm_eval_apply_chat_template": true,
+        "lm_eval_model_args": {
+          "dtype": "bfloat16",
+          "enable_thinking": true
+        }
+      },
+      "effective_axis_config": {
+        "batch_size": 1,
+        "gen_kwargs": {
+          "max_gen_toks": 16384
+        },
+        "lm_eval_backend": "vllm",
+        "lm_eval_model_args": {
+          "enable_thinking": true
+        },
+        "log_samples": true,
+        "vllm_batch_size": "auto",
+        "vllm_model_args": {
+          "tensor_parallel_size": 1,
+          "gpu_memory_utilization": 0.9,
+          "max_model_len": 20480,
+          "enforce_eager": false
+        }
+      },
+      "exit_code": 0
+    },
+    {
+      "axis": "reasoning_math",
+      "axis_part": 2,
+      "axis_parts": 2,
+      "evaluator": "lm_eval",
+      "tasks": [
+        {
+          "task_id": "aime24",
+          "metric": "exact_match",
+          "denylist_source": "aime24",
+          "runner_task_name": "aime24"
+        }
+      ],
+      "effective_chat_format": {
+        "lm_eval_apply_chat_template": true,
+        "lm_eval_model_args": {
+          "dtype": "bfloat16",
+          "enable_thinking": true
+        }
+      },
+      "effective_axis_config": {
+        "batch_size": 1,
+        "gen_kwargs": {
+          "max_gen_toks": 28672
+        },
+        "lm_eval_backend": "vllm",
+        "lm_eval_model_args": {
+          "enable_thinking": true
+        },
+        "log_samples": true,
+        "vllm_batch_size": "auto",
+        "vllm_model_args": {
+          "tensor_parallel_size": 1,
+          "gpu_memory_utilization": 0.9,
+          "max_model_len": 32768,
+          "enforce_eager": false
+        }
+      },
+      "exit_code": 0
+    },
+    {
+      "axis": "reasoning_long",
+      "axis_part": 1,
+      "axis_parts": 1,
+      "evaluator": "lm_eval",
+      "tasks": [
+        {
+          "task_id": "gpqa_diamond_cot_zeroshot_boxed",
+          "runner_task_name": "code/cfg/benchmark/lm_eval_tasks/gpqa_diamond_cot_zeroshot_boxed.yaml",
+          "metric": "exact_match,flexible-extract",
+          "denylist_source": "gpqa_diamond"
+        }
+      ],
+      "effective_chat_format": {
+        "lm_eval_apply_chat_template": true,
+        "lm_eval_model_args": {
+          "dtype": "bfloat16",
+          "enable_thinking": true
+        }
+      },
+      "effective_axis_config": {
+        "batch_size": 1,
+        "gen_kwargs": {
+          "max_gen_toks": 28672
+        },
+        "lm_eval_backend": "vllm",
+        "lm_eval_model_args": {
+          "enable_thinking": true
+        },
+        "log_samples": true,
+        "vllm_batch_size": "auto",
+        "vllm_model_args": {
+          "tensor_parallel_size": 1,
+          "gpu_memory_utilization": 0.9,
+          "max_model_len": 32768,
+          "enforce_eager": false
+        }
+      },
+      "exit_code": 0
+    },
+    {
+      "axis": "safety",
+      "evaluator": "safety_eval",
+      "tasks": [
+        {
+          "task_id": "wildguardtest",
+          "metric": "micro harm (lower)",
+          "higher_is_better": false,
+          "runner_task_name": "wildguardtest"
+        },
+        {
+          "task_id": "harmbench",
+          "metric": "micro ASR (lower)",
+          "higher_is_better": false,
+          "runner_task_name": "harmbench"
+        },
+        {
+          "task_id": "xstest",
+          "metric": "overall_accuracy",
+          "runner_task_name": "xstest"
+        },
+        {
+          "task_id": "do_anything_now",
+          "metric": "macro ASR",
+          "higher_is_better": false,
+          "runner_task_name": "do_anything_now"
+        }
+      ],
+      "effective_chat_format": {
+        "lm_eval_apply_chat_template": true,
+        "lm_eval_model_args": {
+          "dtype": "bfloat16",
+          "enable_thinking": false
+        }
+      },
+      "exit_code": 0
+    }
+  ],
+  "verified_commits": {
+    "safety_eval": {
+      "expected": "2920bb85a8a8390144b9256f697395f81b94822e",
+      "actual": "2920bb85a8a8390144b9256f697395f81b94822e"
+    }
+  },
+  "finished_at_utc": "2026-05-25T00:51:39.210037+00:00",
+  "exit_code": 0
+}

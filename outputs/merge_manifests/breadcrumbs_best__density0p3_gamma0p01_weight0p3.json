@@ -1,0 +1,40 @@
+{
+  "config_id": "breadcrumbs_best__density0p3_gamma0p01_weight0p3",
+  "baseline_id": "breadcrumbs_best",
+  "method_family": "Breadcrumbs",
+  "mergekit_method": "breadcrumbs",
+  "variant": "fixed",
+  "parameters": {
+    "normalize": false,
+    "weight": 0.3,
+    "density": 0.3,
+    "gamma": 0.01
+  },
+  "mergekit_random_seed": 1,
+  "base_model": {
+    "alias": "base",
+    "repo": "Qwen/Qwen3-8B-Base",
+    "revision": "49e3418fbbbca6ecbdf9608b4d22e5a407081db4"
+  },
+  "source_models": [
+    {
+      "alias": "instr_only",
+      "repo": "Qwen/Qwen3-8B",
+      "revision": "b968826d9c46dd6066d109eabc6255188de91218"
+    },
+    {
+      "alias": "reasoning_only",
+      "repo": "OpenDataArena/Qwen3-8B-ODA-Math-460k",
+      "revision": "8e8758ee23e5d959dd844b3bb5c5344219544795"
+    },
+    {
+      "alias": "uncensored_only",
+      "repo": "mlabonne/Qwen3-8B-abliterated",
+      "revision": "30c72fa348f37c72d12ecbb259068ddee98aa9ed"
+    }
+  ],
+  "mergekit_yaml": "outputs/mergekit_configs/breadcrumbs_best__density0p3_gamma0p01_weight0p3.yaml",
+  "run": {
+    "exit_code": 0
+  }
+}

@@ -253,6 +253,14 @@ def build_calibration_data(config_path: Path) -> None:
 
     exclusion_cfg = cfg["benchmark_exclusion"]
     benchmark_denylist_path = resolve_project_path(exclusion_cfg["benchmark_denylist"], PROJECT_ROOT)
+    if not benchmark_denylist_path.exists():
+        raise FileNotFoundError(f"Benchmark denylist not found: {project_path(benchmark_denylist_path, PROJECT_ROOT)}")
+    denylist_manifest_path = benchmark_denylist_path.with_name("benchmark_denylist_manifest.json")
+    denylist_manifest = try_read_json(denylist_manifest_path)
+    if not denylist_manifest:
+        raise FileNotFoundError(f"Benchmark denylist manifest not found or unreadable: {project_path(denylist_manifest_path, PROJECT_ROOT)}")
+    if denylist_manifest.get("output_sha256") != file_sha256(benchmark_denylist_path):
+        raise RuntimeError("Benchmark denylist hash does not match its manifest. Rebuild the denylist.")
 
     near_cfg = exclusion_cfg.get("near_duplicate", {})
 
@@ -459,17 +467,13 @@ def build_calibration_data(config_path: Path) -> None:
         "ablation_subsets": ablation_outputs,
     }
 
-    denylist_manifest_path = benchmark_denylist_path.with_name("benchmark_denylist_manifest.json")
-    denylist_manifest = try_read_json(denylist_manifest_path)
-    benchmark_source_info: Dict[str, Any] = {}
-    if denylist_manifest:
-        benchmark_source_info = {
-            "benchmark_config_sha256": denylist_manifest.get("benchmark_config_sha256"),
-            "input_snapshot": denylist_manifest.get("input_snapshot"),
-            "input_snapshot_sha256": denylist_manifest.get("input_snapshot_sha256"),
-            "input_snapshot_summary": denylist_manifest.get("input_snapshot_summary"),
-            "task_counts": denylist_manifest.get("task_counts"),
-        }
+    benchmark_source_info: Dict[str, Any] = {
+        "benchmark_config_sha256": denylist_manifest.get("benchmark_config_sha256"),
+        "input_snapshot": denylist_manifest.get("input_snapshot"),
+        "input_snapshot_sha256": denylist_manifest.get("input_snapshot_sha256"),
+        "input_snapshot_summary": denylist_manifest.get("input_snapshot_summary"),
+        "task_counts": denylist_manifest.get("task_counts"),
+    }
 
     manifest = {
         "created_at_utc": datetime.now(timezone.utc).isoformat(),

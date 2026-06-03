@@ -1,0 +1,183 @@
+lot_config_id: qwen3_8b_lot_baselines
+
+base_model: base
+source_models:
+  instruction: instr_only
+  reasoning: reasoning_only
+  uncensored: uncensored_only
+
+tokenizer_source: instr_only
+calibration_config: code/cfg/calibration/calib_mix.yaml
+
+runtime:
+  dtype: bfloat16
+  device: cuda
+  trust_remote_code: true
+  sharding: preserve_base_safetensors
+
+features:
+  input_format: raw_text
+  text_field: text
+  max_length: 512
+  # 64 * 192 = 12288 rows per specialist = d_in for Qwen3-8B down_proj.
+  # This is the borderline of full-rank X^T X; rely on solver.pinv_rcond=1e-4 to
+  # truncate the smallest singular values for stability. Going below this product
+  # (e.g. tokens_per_prompt=128 -> 8192 rows) caused down_proj rank-deficiency:
+  # several layers collapsed to <6% of the mean_delta norm (effectively no LOT update).
+  # Going above (e.g. 96 * 192 = 18432) requires ~196 GB CPU RAM for 3 specialists
+  # x 36 layers x all hooked modules, which exceeds the Colab A100 box (167 GB).
+  # On machines with more CPU RAM, override via --n-prompts-per-source / --tokens-per-prompt.
+  prompts_per_source: 64
+  tokens_per_prompt: 192
+  batch_size: 16
+
+# Paper-faithful LOT solver (Sun et al., NeurIPS 2025):
+#   - Eq. 9 for linear weights via Moore-Penrose pseudoinverse
+#   - Eq. 12 for RMSNorm scale weights via per-dim feature-weighted average
+#   - mean_delta fallback for embeddings, lm_head, final norm and biases.
+# Numerical stability additions over the pure paper formulation:
+#   - pinv_rcond: truncated SVD threshold to avoid amplifying small singular values
+#     of sum_k X_k^T X_k (otherwise causes ~3x over-amplification on early layers
+#     where activations are highly correlated).
+#   - max_delta_norm_ratio: fallback to mean_delta when the LOT solution exceeds N times
+#     the mean_delta norm; catches numerical blow-ups that pinv_rcond alone may not handle.
+solver_paper:
+  type: paper
+  output_scale: 1.0
+  rms_eps: 1.0e-6
+  div_eps: 1.0e-10
+  pinv_rcond: 1.0e-4
+  fallback_on_nonfinite: true
+  max_delta_norm_ratio: 3.0
+
+tensors:
+  linear_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  norm_modules:
+    enabled: false
+    strategy: mean_delta
+  embeddings:
+    strategy: mean_delta
+  lm_head:
+    strategy: mean_delta
+  unsupported_float:
+    strategy: mean_delta
+  non_float:
+    strategy: copy_base
+
+baselines:
+  # Paper-faithful LOT (canonical formulation from Sun et al., NeurIPS 2025).
+  # Eq. 9 for matrix-multiplication parameters in attention and MLP,
+  # Eq. 12 for input_layernorm / post_attention_layernorm scale weights,
+  # embeddings / lm_head / model.norm fall back to mean_delta (matches paper's
+  # initialization of opt_tv to mean(T_k) followed by `continue` on skipped params).
+  lot_paper_domain_matched:
+    method_family: LOT_paper
+    variant: paper_domain_matched
+    solver_ref: solver_paper
+    tensors_overrides:
+      norm_modules:
+        enabled: true
+        strategy: lot_paper_norm
+        strategy_excluded: mean_delta
+        include_suffixes:
+          - input_layernorm
+          - post_attention_layernorm
+    source_calibrations:
+      instruction: instruction
+      reasoning: reasoning
+      uncensored: uncensored_refusal_like
+
+  lot_paper_mix:
+    method_family: LOT_paper
+    variant: paper_mix
+    solver_ref: solver_paper
+    tensors_overrides:
+      norm_modules:
+        enabled: true
+        strategy: lot_paper_norm
+        strategy_excluded: mean_delta
+        include_suffixes:
+          - input_layernorm
+          - post_attention_layernorm
+    source_calibrations:
+      instruction: mix
+      reasoning: mix
+      uncensored: mix
+
+  # All specialists collect activations on a single calibration subset
+  # (parallel to AIM's per-calibration ablation). Useful for isolating
+  # sensitivity to the calibration source vs the LOT method itself.
+  lot_paper_general:
+    method_family: LOT_paper
+    variant: paper_general
+    solver_ref: solver_paper
+    tensors_overrides:
+      norm_modules:
+        enabled: true
+        strategy: lot_paper_norm
+        strategy_excluded: mean_delta
+        include_suffixes:
+          - input_layernorm
+          - post_attention_layernorm
+    source_calibrations:
+      instruction: general
+      reasoning: general
+      uncensored: general
+
+  lot_paper_instruction:
+    method_family: LOT_paper
+    variant: paper_instruction
+    solver_ref: solver_paper
+    tensors_overrides:
+      norm_modules:
+        enabled: true
+        strategy: lot_paper_norm
+        strategy_excluded: mean_delta
+        include_suffixes:
+          - input_layernorm
+          - post_attention_layernorm
+    source_calibrations:
+      instruction: instruction
+      reasoning: instruction
+      uncensored: instruction
+
+  lot_paper_reasoning:
+    method_family: LOT_paper
+    variant: paper_reasoning
+    solver_ref: solver_paper
+    tensors_overrides:
+      norm_modules:
+        enabled: true
+        strategy: lot_paper_norm
+        strategy_excluded: mean_delta
+        include_suffixes:
+          - input_layernorm
+          - post_attention_layernorm
+    source_calibrations:
+      instruction: reasoning
+      reasoning: reasoning
+      uncensored: reasoning
+
+  lot_paper_uncensored_refusal_like:
+    method_family: LOT_paper
+    variant: paper_uncensored_refusal_like
+    solver_ref: solver_paper
+    tensors_overrides:
+      norm_modules:
+        enabled: true
+        strategy: lot_paper_norm
+        strategy_excluded: mean_delta
+        include_suffixes:
+          - input_layernorm
+          - post_attention_layernorm
+    source_calibrations:
+      instruction: uncensored_refusal_like
+      reasoning: uncensored_refusal_like
+      uncensored: uncensored_refusal_like

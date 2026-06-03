@@ -1,0 +1,183 @@
+base_model: base
+source_models:
+- instr_only
+- reasoning_only
+- uncensored_only
+baselines:
+  naive_avg:
+    method_family: full-weight average
+    mergekit_method: linear
+  task_arithmetic_best:
+    method_family: task arithmetic
+    mergekit_method: task_arithmetic
+    parameters:
+      normalize: false
+      weight: 0.3
+    search_grid:
+      weight:
+      - 0.3
+      - 0.5
+      - 0.7
+    frozen_from:
+      selected_config_id: task_arithmetic_best__weight0p3
+      selection_score: 0.5042662116040956
+  ties_best:
+    method_family: TIES
+    mergekit_method: ties
+    parameters:
+      normalize: false
+      weight: 0.3
+      density: 0.5
+    search_grid:
+      weight:
+      - 0.3
+      - 0.5
+      - 0.7
+      density:
+      - 0.3
+      - 0.5
+      - 0.7
+    frozen_from:
+      selected_config_id: ties_best__density0p5_weight0p3
+      selection_score: 0.5068259385665529
+  dare_best:
+    method_family: DARE
+    mergekit_method: dare_ties
+    parameters:
+      normalize: false
+      weight: 0.3
+      density: 0.5
+    search_grid:
+      weight:
+      - 0.3
+      - 0.5
+      - 0.7
+      density:
+      - 0.3
+      - 0.5
+      - 0.7
+    frozen_from:
+      selected_config_id: dare_best__density0p5_weight0p3
+      selection_score: 0.49829351535836175
+  della_best:
+    method_family: DELLA
+    mergekit_method: della
+    parameters:
+      normalize: false
+      weight: 0.3
+      density: 0.5
+      epsilon: 0.05
+      lambda: 1.0
+    search_grid:
+      weight:
+      - 0.3
+      - 0.5
+      - 0.7
+      density:
+      - 0.3
+      - 0.5
+      - 0.7
+      epsilon:
+      - 0.05
+      lambda:
+      - 1.0
+    frozen_from:
+      selected_config_id: della_best__density0p5_epsilon0p05_lambda1p0_weight0p3
+      selection_score: 0.4948805460750853
+  breadcrumbs_best:
+    method_family: Breadcrumbs
+    mergekit_method: breadcrumbs
+    parameters:
+      normalize: false
+      weight: 0.5
+      density: 0.3
+      gamma: 0.01
+    search_grid:
+      weight:
+      - 0.3
+      - 0.5
+      - 0.7
+      density:
+      - 0.3
+      - 0.5
+      - 0.7
+      gamma:
+      - 0.01
+    frozen_from:
+      selected_config_id: breadcrumbs_best__density0p3_gamma0p01_weight0p5
+      selection_score: 0.4880546075085324
+  task_arithmetic_random:
+    method_family: task arithmetic
+    mergekit_method: task_arithmetic
+    parameters:
+      normalize: false
+    random:
+      seeds:
+      - 1
+      profile_points: 36
+      weight:
+      - 0.3
+      - 0.7
+  ties_random:
+    method_family: TIES
+    mergekit_method: ties
+    parameters:
+      normalize: false
+    random:
+      seeds:
+      - 1
+      profile_points: 36
+      weight:
+      - 0.3
+      - 0.7
+      density:
+      - 0.3
+      - 0.7
+  dare_random:
+    method_family: DARE
+    mergekit_method: dare_ties
+    parameters:
+      normalize: false
+    random:
+      seeds:
+      - 1
+      profile_points: 36
+      weight:
+      - 0.3
+      - 0.7
+      density:
+      - 0.3
+      - 0.7
+  della_random:
+    method_family: DELLA
+    mergekit_method: della
+    parameters:
+      normalize: false
+      epsilon: 0.05
+      lambda: 1.0
+    random:
+      seeds:
+      - 1
+      profile_points: 36
+      weight:
+      - 0.3
+      - 0.7
+      density:
+      - 0.3
+      - 0.7
+  breadcrumbs_random:
+    method_family: Breadcrumbs
+    mergekit_method: breadcrumbs
+    parameters:
+      normalize: false
+      gamma: 0.01
+    random:
+      seeds:
+      - 1
+      profile_points: 36
+      weight:
+      - 0.3
+      - 0.7
+      density:
+      - 0.3
+      - 0.7

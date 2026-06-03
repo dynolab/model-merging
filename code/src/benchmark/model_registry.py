@@ -5,10 +5,10 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from common.io import file_sha256, project_path, read_json
+from common.io import file_sha256, read_json
 from common.text import safe_id
 
-from benchmark.common import MATERIALIZED_MODELS_ROOT, PROJECT_ROOT
+from benchmark.common import MATERIALIZED_MODELS_ROOT
 
 
 LOCAL_MODEL_MANIFEST = "merge_manifest.json"
@@ -103,31 +103,17 @@ def hash_local_checkpoint_files(model_path: str) -> dict[str, dict[str, Any]]:
     return out
 
 
-def load_local_model_manifest(model_path: str) -> dict[str, Any]:
+def load_local_model_manifest(model_path: str) -> tuple[dict[str, Any], str | None]:
     path = Path(model_path).expanduser().resolve()
     manifest_path = path / LOCAL_MODEL_MANIFEST
     if not manifest_path.exists():
-        return {
-            "manifest_path": project_path(manifest_path, PROJECT_ROOT),
-            "manifest_sha256": None,
-            "manifest": None,
-            "warnings": [f"local checkpoint does not contain {LOCAL_MODEL_MANIFEST}"],
-        }
+        return {"manifest": None, "warnings": [f"local checkpoint does not contain {LOCAL_MODEL_MANIFEST}"]}, None
+    manifest_sha256 = file_sha256(manifest_path)
     try:
         manifest = read_json(manifest_path)
     except Exception as exc:
-        return {
-            "manifest_path": project_path(manifest_path, PROJECT_ROOT),
-            "manifest_sha256": file_sha256(manifest_path),
-            "manifest": None,
-            "warnings": [f"could not read {LOCAL_MODEL_MANIFEST}: {exc!r}"],
-        }
-    return {
-        "manifest_path": project_path(manifest_path, PROJECT_ROOT),
-        "manifest_sha256": file_sha256(manifest_path),
-        "manifest": manifest,
-        "warnings": [],
-    }
+        return {"manifest": None, "warnings": [f"could not read {LOCAL_MODEL_MANIFEST}: {exc!r}"]}, manifest_sha256
+    return {"manifest": manifest, "warnings": []}, manifest_sha256
 
 
 def snapshot_download(repo_id: str, revision: str) -> str:
@@ -138,17 +124,29 @@ def snapshot_download(repo_id: str, revision: str) -> str:
     return hf_snapshot_download(repo_id=repo_id, revision=revision)
 
 
-def materialize_eval_model(model_arg: str, configured_revision: str | None) -> tuple[str, dict[str, Any]]:
-    MATERIALIZED_MODELS_ROOT.mkdir(parents=True, exist_ok=True)
-
+def materialize_eval_model(
+    model_arg: str,
+    configured_revision: str | None,
+    *,
+    materialize_local: bool = True,
+    hash_local_files: bool = True,
+) -> tuple[str, dict[str, Any]]:
     local_manifest = None
     local_checkpoint_hashes = None
     if is_local_model_path(model_arg):
         source_path = Path(resolve_model_arg(model_arg))
-        local_manifest = load_local_model_manifest(model_arg)
-        local_checkpoint_hashes = hash_local_checkpoint_files(model_arg)
-        if local_manifest["manifest_sha256"]:
-            local_identity = local_manifest["manifest_sha256"][:12]
+        local_manifest, local_manifest_sha256 = load_local_model_manifest(model_arg)
+        local_checkpoint_hashes = hash_local_checkpoint_files(model_arg) if hash_local_files else None
+        if not materialize_local:
+            return str(source_path), {
+                "kind": "local_checkpoint",
+                "input_model": model_arg,
+                "configured_revision": configured_revision,
+                "local_model_manifest": local_manifest,
+                "local_checkpoint_files_sha256": local_checkpoint_hashes,
+            }
+        if local_manifest_sha256:
+            local_identity = local_manifest_sha256[:12]
         elif (source_path / "config.json").exists():
             local_identity = file_sha256(source_path / "config.json")[:12]
         else:
@@ -162,8 +160,6 @@ def materialize_eval_model(model_arg: str, configured_revision: str | None) -> t
         identity_key = safe_id(model_arg) + "__" + configured_revision[:12]
         model_source_kind = "hf_repo"
 
-    eval_dir = MATERIALIZED_MODELS_ROOT / identity_key
-    link_tree(source_path, eval_dir)
     identity: dict[str, Any] = {
         "kind": model_source_kind,
         "input_model": model_arg,
@@ -172,4 +168,8 @@ def materialize_eval_model(model_arg: str, configured_revision: str | None) -> t
     if model_source_kind == "local_checkpoint":
         identity["local_model_manifest"] = local_manifest
         identity["local_checkpoint_files_sha256"] = local_checkpoint_hashes
+
+    MATERIALIZED_MODELS_ROOT.mkdir(parents=True, exist_ok=True)
+    eval_dir = MATERIALIZED_MODELS_ROOT / identity_key
+    link_tree(source_path, eval_dir)
     return str(eval_dir), identity

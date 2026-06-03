@@ -1,0 +1,35 @@
+/content/mm_env/lib/python3.12/site-packages/transformers/utils/hub.py:111: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+Fetching 14 files:   0%|          | 0/14 [00:00<?, ?it/s]Fetching 14 files:   7%|▋         | 1/14 [00:00<00:05,  2.18it/s]Fetching 14 files:  43%|████▎     | 6/14 [00:45<01:04,  8.01s/it]Fetching 14 files:  57%|█████▋    | 8/14 [00:46<00:33,  5.52s/it]Fetching 14 files: 100%|██████████| 14/14 [00:46<00:00,  3.35s/it]
+Fetching 14 files:   0%|          | 0/14 [00:00<?, ?it/s]Fetching 14 files: 100%|██████████| 14/14 [00:00<00:00, 154934.71it/s]
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files:   7%|▋         | 1/15 [00:00<00:03,  3.75it/s]Fetching 15 files:  47%|████▋     | 7/15 [00:43<00:51,  6.45s/it]Fetching 15 files: 100%|██████████| 15/15 [00:43<00:00,  2.89s/it]
+Fetching 43 files:   0%|          | 0/43 [00:00<?, ?it/s]Fetching 43 files:   2%|▏         | 1/43 [00:00<00:12,  3.48it/s]Fetching 43 files:  21%|██        | 9/43 [00:00<00:01, 19.42it/s]Fetching 43 files:  21%|██        | 9/43 [00:18<00:01, 19.42it/s]Fetching 43 files:  28%|██▊       | 12/43 [00:53<03:00,  5.83s/it]Fetching 43 files: 100%|██████████| 43/43 [00:53<00:00,  1.24s/it]
+Fetching 18 files:   0%|          | 0/18 [00:00<?, ?it/s]Fetching 18 files:   6%|▌         | 1/18 [00:00<00:04,  3.57it/s]Fetching 18 files:  39%|███▉      | 7/18 [01:33<02:33, 13.96s/it]Fetching 18 files:  44%|████▍     | 8/18 [01:37<02:02, 12.21s/it]Fetching 18 files:  67%|██████▋   | 12/18 [01:40<00:38,  6.43s/it]Fetching 18 files: 100%|██████████| 18/18 [01:40<00:00,  5.57s/it]
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:00<00:01,  2.49it/s]Loading checkpoint shards:  40%|████      | 2/5 [00:00<00:01,  2.50it/s]Loading checkpoint shards:  60%|██████    | 3/5 [00:01<00:00,  2.96it/s]Loading checkpoint shards:  80%|████████  | 4/5 [00:01<00:00,  3.48it/s]Loading checkpoint shards: 100%|██████████| 5/5 [00:01<00:00,  3.91it/s]
+[cache] base/general: results/activation_metrics/reference_cache/base/general.npz
+[cache] base/instruction: results/activation_metrics/reference_cache/base/instruction.npz
+[cache] base/reasoning: results/activation_metrics/reference_cache/base/reasoning.npz
+[cache] base/uncensored_refusal_like: results/activation_metrics/reference_cache/base/uncensored_refusal_like.npz
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:00<00:00,  6.07it/s]Loading checkpoint shards:  40%|████      | 2/5 [00:00<00:00,  4.99it/s]Loading checkpoint shards:  60%|██████    | 3/5 [00:00<00:00,  4.63it/s]Loading checkpoint shards:  80%|████████  | 4/5 [00:00<00:00,  4.49it/s]Loading checkpoint shards: 100%|██████████| 5/5 [00:00<00:00,  5.81it/s]
+[cache] instr_only/general: results/activation_metrics/reference_cache/instr_only/general.npz
+[cache] instr_only/instruction: results/activation_metrics/reference_cache/instr_only/instruction.npz
+[cache] instr_only/reasoning: results/activation_metrics/reference_cache/instr_only/reasoning.npz
+[cache] instr_only/uncensored_refusal_like: results/activation_metrics/reference_cache/instr_only/uncensored_refusal_like.npz
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:00,  4.64it/s]Loading checkpoint shards:  50%|█████     | 2/4 [00:00<00:00,  3.80it/s]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:00<00:00,  3.67it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  4.92it/s]
+[cache] reasoning_only/general: results/activation_metrics/reference_cache/reasoning_only/general.npz
+[cache] reasoning_only/instruction: results/activation_metrics/reference_cache/reasoning_only/instruction.npz
+[cache] reasoning_only/reasoning: results/activation_metrics/reference_cache/reasoning_only/reasoning.npz
+[cache] reasoning_only/uncensored_refusal_like: results/activation_metrics/reference_cache/reasoning_only/uncensored_refusal_like.npz
+Loading checkpoint shards:   0%|          | 0/7 [00:00<?, ?it/s]Loading checkpoint shards:  14%|█▍        | 1/7 [00:16<01:38, 16.43s/it]Loading checkpoint shards:  29%|██▊       | 2/7 [00:32<01:20, 16.18s/it]Loading checkpoint shards:  43%|████▎     | 3/7 [00:48<01:03, 15.94s/it]Loading checkpoint shards:  57%|█████▋    | 4/7 [01:04<00:48, 16.13s/it]Loading checkpoint shards:  71%|███████▏  | 5/7 [01:20<00:31, 15.94s/it]Loading checkpoint shards:  86%|████████▌ | 6/7 [01:35<00:15, 15.85s/it]Loading checkpoint shards: 100%|██████████| 7/7 [01:46<00:00, 14.28s/it]Loading checkpoint shards: 100%|██████████| 7/7 [01:46<00:00, 15.26s/it]
+[cache] uncensored_only/general: results/activation_metrics/reference_cache/uncensored_only/general.npz
+[cache] uncensored_only/instruction: results/activation_metrics/reference_cache/uncensored_only/instruction.npz
+[cache] uncensored_only/reasoning: results/activation_metrics/reference_cache/uncensored_only/reasoning.npz
+[cache] uncensored_only/uncensored_refusal_like: results/activation_metrics/reference_cache/uncensored_only/uncensored_refusal_like.npz
+[scores] base: results/activation_metrics/model_scores/base.csv rows=1152
+[scores] instr_only: results/activation_metrics/model_scores/instr_only.csv rows=1152
+[scores] reasoning_only: results/activation_metrics/model_scores/reasoning_only.csv rows=1152
+[scores] uncensored_only: results/activation_metrics/model_scores/uncensored_only.csv rows=1152
+[done] wrote results/activation_metrics/activation_metric_scores.csv
+[done] wrote results/activation_metrics/activation_metric_pair_summary.csv
+[done] wrote results/activation_metrics/activation_metric_forgetting.csv
+[done] wrote results/activation_metrics/activation_metric_forgetting_summary.csv

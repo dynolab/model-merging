@@ -3,6 +3,7 @@ benchmark_id: qwen3_8b_benchmark_min
 chat_format:
   lm_eval_apply_chat_template: true
   lm_eval_model_args:
+    dtype: bfloat16
     enable_thinking: false
 
 models:
@@ -12,6 +13,8 @@ models:
   instr_only:
     repo: Qwen/Qwen3-8B
     revision: "b968826d9c46dd6066d109eabc6255188de91218"
+    lm_eval_model_args:
+      enable_thinking: false
   reasoning_only:
     repo: OpenDataArena/Qwen3-8B-ODA-Math-460k
     revision: "8e8758ee23e5d959dd844b3bb5c5344219544795"
@@ -43,9 +46,28 @@ benchmark_input_sources:
         separator: "\n"
         kind: benchmark_question_with_answer
 
+  aime24:
+    dataset: Maxwell-Jia/AIME_2024
+    split: train
+    revision: "8d88b2876a82a080e2f172cc9b25d0d9d2cb4792"
+    text_fields:
+      - Problem
+    joined_fields:
+      - fields:
+          - Problem
+          - Answer
+        separator: "\n"
+        kind: benchmark_question_with_answer
+
+  gpqa_diamond:
+    dataset: Idavidrein/gpqa
+    name: gpqa_diamond
+    split: train
+    text_fields:
+      - Question
+
 safety_eval_input_sources:
   wildguardtest:
-    safety_eval_task: wildguardtest
     text_fields:
       - prompt
     dataset_revision_overrides:
@@ -54,21 +76,18 @@ safety_eval_input_sources:
         revision: "ea7fa769fec91855ec3ada77ce556068cffe85b7"
 
   harmbench:
-    safety_eval_task: harmbench
     text_fields:
       - Behavior
     source_files:
       - evaluation/tasks/generation/harmbench/harmbench_behaviors_text_test.csv
 
   xstest:
-    safety_eval_task: xstest
     text_fields:
       - prompt
     source_files:
       - evaluation/tasks/generation/xstest/exaggerated_safety.json
 
   do_anything_now:
-    safety_eval_task: do_anything_now
     text_fields:
       - instruction
     source_files:
@@ -88,12 +107,21 @@ aggregate:
   axes:
     - instruction_following
     - reasoning_math
+    - reasoning_long
     - safety
 
 axes:
   instruction_following:
     enabled: true
     evaluator: lm_eval
+    lm_eval_backend: vllm
+    vllm_batch_size: auto
+    vllm_model_args:
+      tensor_parallel_size: 1
+      gpu_memory_utilization: 0.9
+      max_model_len: 4096
+      enforce_eager: false
+    log_samples: true
     batch_size: 4
     tasks:
       - task_id: ifeval
@@ -102,11 +130,53 @@ axes:
   reasoning_math:
     enabled: true
     evaluator: lm_eval
-    batch_size: 4
+    lm_eval_backend: vllm
+    lm_eval_model_args:
+      enable_thinking: true
+    vllm_batch_size: auto
+    vllm_model_args:
+      tensor_parallel_size: 1
+      gpu_memory_utilization: 0.9
+      max_model_len: 20480
+      enforce_eager: false
+    gen_kwargs:
+      max_gen_toks: 16384
+    log_samples: true
+    batch_size: 1
     tasks:
-      - task_id: gsm8k_cot
-        metric: exact_match,strict-match
+      - task_id: gsm8k_cot_boxed
+        runner_task_name: code/cfg/benchmark/lm_eval_tasks/gsm8k_cot_boxed.yaml
+        metric: exact_match,flexible-extract
         denylist_source: gsm8k
+      - task_id: aime24
+        metric: exact_match
+        denylist_source: aime24
+        vllm_model_args:
+          max_model_len: 32768
+        gen_kwargs:
+          max_gen_toks: 28672
+
+  reasoning_long:
+    enabled: true
+    evaluator: lm_eval
+    lm_eval_backend: vllm
+    lm_eval_model_args:
+      enable_thinking: true
+    vllm_batch_size: auto
+    vllm_model_args:
+      tensor_parallel_size: 1
+      gpu_memory_utilization: 0.9
+      max_model_len: 32768
+      enforce_eager: false
+    gen_kwargs:
+      max_gen_toks: 28672
+    log_samples: true
+    batch_size: 1
+    tasks:
+      - task_id: gpqa_diamond_cot_zeroshot_boxed
+        runner_task_name: code/cfg/benchmark/lm_eval_tasks/gpqa_diamond_cot_zeroshot_boxed.yaml
+        metric: exact_match,flexible-extract
+        denylist_source: gpqa_diamond
 
   safety:
     enabled: true

@@ -78,7 +78,10 @@ def enabled_tasks(cfg: dict[str, Any]) -> list[dict[str, Any]]:
         for task in axis_cfg.get("tasks", []):
             if not isinstance(task, dict):
                 raise ValueError(f"task entry must be a mapping: {task!r}")
-            task_id = str(task.get("task_id") or task.get("runner_task_name"))
+            task_id_value = task.get("task_id") or task.get("runner_task_name")
+            if not task_id_value:
+                raise ValueError(f"task entry must define task_id: {task!r}")
+            task_id = str(task_id_value)
             runner_task_name = str(task.get("runner_task_name") or task_id)
             out.append({
                 "axis": axis_name,
@@ -384,10 +387,16 @@ def main() -> None:
 
     out_rows = rows
     out_rows.sort(key=lambda r: (str(r.get("source_axis")), str(r.get("source_task")), str(r.get("source_field")), r["normalized_sha256"]))
-    write_jsonl(output, out_rows)
 
     enabled = enabled_runner_tasks(cfg)
     missing = [task for task in enabled if task_counts[task] == 0]
+    if missing:
+        print("[INFO] task counts:")
+        for task in enabled:
+            print(f"  - {task}: {task_counts[task]}")
+        print("[warning] no benchmark input text was collected for: " + ", ".join(missing))
+
+    write_jsonl(output, out_rows)
     manifest = {
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "benchmark_config": project_path(BENCHMARK_CONFIG, PROJECT_ROOT),
@@ -408,8 +417,6 @@ def main() -> None:
         },
         "warnings": list(safety_info.get("warnings", [])) if isinstance(safety_info, dict) else [],
     }
-    if missing:
-        manifest["warnings"].append("No benchmark input text was collected for: " + ", ".join(missing))
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=True, indent=2), encoding="utf-8")
     print(f"[OK] wrote benchmark input snapshot: {project_path(output, PROJECT_ROOT)}")
@@ -418,8 +425,6 @@ def main() -> None:
     print("[INFO] task counts:")
     for task in enabled:
         print(f"  - {task}: {task_counts[task]}")
-    if missing:
-        print("[warning] No benchmark input text was collected for: " + ", ".join(missing))
 
 
 if __name__ == "__main__":

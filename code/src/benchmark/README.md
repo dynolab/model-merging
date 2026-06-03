@@ -23,9 +23,10 @@ Configs:
 
 ```text
 code/cfg/benchmark/benchmark.yaml
+code/cfg/benchmark/benchmark_selection.yaml
 ```
 
-You also need Hugging Face access to `allenai/wildguardmix` and `allenai/wildjailbreak`.
+You also need Hugging Face access to the safety datasets used by the pinned safety-eval fork, including `allenai/wildguardmix` and `allenai/wildjailbreak`.
 
 ## Run One Model
 
@@ -60,6 +61,7 @@ After the needed source/specialist/merged runs finish:
 
 ```powershell
 python code/src/benchmark/summarize_benchmark.py
+python code/src/analysis/summarize_reasoning_lengths.py
 ```
 
 Outputs:
@@ -69,6 +71,31 @@ results/benchmark_runs.json
 results/benchmark_tasks.csv
 results/benchmark_main.csv
 results/benchmark_forgetting.csv
+results/benchmark_reasoning_lengths.csv
+results/benchmark_reasoning_samples.csv
 ```
 
-The summarizer marks a run as `valid_run: false` when the run failed, only some axes finished, the benchmark config changed since the run, `run_manifest.json` is missing or a local checkpoint has a missing or unreadable `merge_manifest.json`.
+The summarizer marks a run as `valid_run: false` when the run failed, only some axes or configured tasks finished, the benchmark config changed since the run, `run_manifest.json` is missing or a local checkpoint has a missing or unreadable `merge_manifest.json`.
+
+## Selection Benchmark
+
+Use this only for one-time `_best` grid selection. The task list lives in
+`code/cfg/benchmark/benchmark_selection.yaml`; for the current phase it uses
+`arc_challenge`, separate from the final IF/reasoning/safety axes.
+
+Run selection through the disk-safe merge runner so only one large candidate
+checkpoint exists at a time:
+
+```powershell
+python code/src/merge/run_selection_search.py --gpu-ids 0,1
+python code/src/benchmark/summarize_benchmark.py --selection
+python code/src/merge/select_best_merge.py
+```
+
+Selection summary writes:
+
+```text
+results/benchmark_selection_main.csv
+```
+
+It contains `Aggregate`, the mean over the selection tasks, plus one column per selection task.
