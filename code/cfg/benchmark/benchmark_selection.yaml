@@ -1,0 +1,12 @@
+benchmark_id: qwen3_8b_selection
+
+chat_format:
+  lm_eval_apply_chat_template: true
+  lm_eval_model_args:
+    dtype: bfloat16
+    enable_thinking: false
+
+batch_size: 4
+tasks:
+  - task_id: arc_challenge
+    metric: acc_norm

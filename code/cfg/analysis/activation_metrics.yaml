@@ -1,0 +1,60 @@
+analysis_id: qwen3_8b_activation_metric_comparison
+
+benchmark_config: code/cfg/benchmark/benchmark.yaml
+benchmark_results:
+  forgetting: results/benchmark_forgetting.csv
+
+output_dir: results/activation_metrics
+
+model_loading:
+  torch_dtype: bfloat16
+  trust_remote_code: true
+  tokenizer_alias: base
+  device: cuda
+
+activation_extraction:
+  layers: all
+  n_prompts_per_subset: 128
+  batch_size: 1
+  max_length: 512
+  text_field: text
+  pooling: last_non_padding_token
+  normalization: l2
+
+calibration_subsets:
+  general:
+    file: data/calibration/calib_general.jsonl
+  instruction:
+    file: data/calibration/calib_instruction.jsonl
+  reasoning:
+    file: data/calibration/calib_reasoning.jsonl
+  uncensored_refusal_like:
+    file: data/calibration/calib_uncensored_refusal_like.jsonl
+
+reference_targets:
+  base:
+    run_alias: base
+  instr_only:
+    run_alias: instr_only
+  reasoning_only:
+    run_alias: reasoning_only
+  uncensored_only:
+    run_alias: uncensored_only
+
+metrics:
+  mmd_rbf:
+    enabled: true
+    bandwidth: median
+    scales: [0.25, 0.5, 1.0, 2.0, 4.0]
+  projected_js:
+    enabled: true
+    projection_seed: 1234
+    n_projections: 64
+    bins: 32
+    epsilon: 1.0e-8
+
+forgetting_domains:
+  B_if: instruction
+  B_reasoning_math: reasoning
+  B_reasoning_long: reasoning
+  B_uncensored: uncensored_refusal_like

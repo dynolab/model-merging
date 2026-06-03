@@ -1,0 +1,112 @@
+{
+  "config_id": "dare_best__density0p7_weight0p5",
+  "model": "outputs/merged/dare_best__density0p7_weight0p5",
+  "model_identity": {
+    "kind": "local_checkpoint",
+    "input_model": "outputs/merged/dare_best__density0p7_weight0p5",
+    "configured_revision": null,
+    "local_model_manifest": {
+      "manifest": {
+        "config_id": "dare_best__density0p7_weight0p5",
+        "baseline_id": "dare_best",
+        "method_family": "DARE",
+        "mergekit_method": "dare_ties",
+        "variant": "fixed",
+        "parameters": {
+          "normalize": false,
+          "weight": 0.5,
+          "density": 0.7
+        },
+        "mergekit_random_seed": 1,
+        "base_model": {
+          "alias": "base",
+          "repo": "Qwen/Qwen3-8B-Base",
+          "revision": "49e3418fbbbca6ecbdf9608b4d22e5a407081db4"
+        },
+        "source_models": [
+          {
+            "alias": "instr_only",
+            "repo": "Qwen/Qwen3-8B",
+            "revision": "b968826d9c46dd6066d109eabc6255188de91218"
+          },
+          {
+            "alias": "reasoning_only",
+            "repo": "OpenDataArena/Qwen3-8B-ODA-Math-460k",
+            "revision": "8e8758ee23e5d959dd844b3bb5c5344219544795"
+          },
+          {
+            "alias": "uncensored_only",
+            "repo": "mlabonne/Qwen3-8B-abliterated",
+            "revision": "30c72fa348f37c72d12ecbb259068ddee98aa9ed"
+          }
+        ],
+        "mergekit_yaml": "outputs/mergekit_configs/dare_best__density0p7_weight0p5.yaml",
+        "run": {
+          "exit_code": 0
+        }
+      },
+      "warnings": []
+    },
+    "local_checkpoint_files_sha256": null
+  },
+  "benchmark_config": "code/cfg/benchmark/benchmark_selection.yaml",
+  "benchmark_config_sha256": "4afa6bd53aa9876bd102e138b405c63cc5112bef2fe4be701cd42fa1caa3c00e",
+  "benchmark_id": "qwen3_8b_selection",
+  "chat_format": {
+    "lm_eval_apply_chat_template": true,
+    "lm_eval_model_args": {
+      "dtype": "bfloat16",
+      "enable_thinking": false
+    }
+  },
+  "gpu_ids": "0,1",
+  "gpu_count": 2,
+  "started_at_utc": "2026-05-13T01:11:16.107778+00:00",
+  "environment": {
+    "python": "3.12.12 (main, Oct 10 2025, 08:52:57) [GCC 11.4.0]",
+    "platform": "Linux-6.6.122+-x86_64-with-glibc2.35",
+    "lm_eval_bin": "lm_eval",
+    "lm_eval_bin_version": "usage: lm-eval [-h] COMMAND ...",
+    "pyyaml": "6.0.1",
+    "torch": "2.9.0+cu126",
+    "transformers": "4.57.6",
+    "accelerate": "1.6.0",
+    "datasets": "2.19.0",
+    "huggingface_hub": "0.36.2",
+    "lm_eval": "0.4.11",
+    "nvidia_driver": "580.105.08",
+    "torch_cuda_available": true,
+    "torch_cuda_version": "12.6",
+    "gpu_count": 2,
+    "requested_gpu_ids": [
+      0,
+      1
+    ],
+    "gpus": [
+      {
+        "gpu_id": 0,
+        "gpu_name": "Tesla T4",
+        "gpu_total_memory_gb": 14.56
+      },
+      {
+        "gpu_id": 1,
+        "gpu_name": "Tesla T4",
+        "gpu_total_memory_gb": 14.56
+      }
+    ]
+  },
+  "warnings": [],
+  "selection_run": {
+    "evaluator": "lm_eval",
+    "tasks": [
+      {
+        "task_id": "arc_challenge",
+        "metric": "acc_norm",
+        "runner_task_name": "arc_challenge"
+      }
+    ],
+    "exit_code": 0
+  },
+  "finished_at_utc": "2026-05-13T01:41:28.577795+00:00",
+  "exit_code": 0
+}

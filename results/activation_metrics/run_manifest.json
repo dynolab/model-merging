@@ -1,0 +1,61 @@
+{
+  "analysis_id": "qwen3_8b_activation_metric_comparison",
+  "created_or_updated_at_utc": "2026-05-27T20:20:47.505003+00:00",
+  "config": "code/cfg/analysis/activation_metrics.yaml",
+  "config_sha256": "6f332333780ebdaf459da72a0b41a56892aeca1b0cc3c11980ea0180acb7d4a5",
+  "benchmark_config": "code/cfg/benchmark/benchmark.yaml",
+  "benchmark_config_sha256": "59a67bce1342f794e1b1f1f81f350d3591b7726f5a18062ca0dd64679723acf5",
+  "calibration_subsets": {
+    "general": {
+      "file": "data/calibration/calib_general.jsonl",
+      "sha256": null
+    },
+    "instruction": {
+      "file": "data/calibration/calib_instruction.jsonl",
+      "sha256": null
+    },
+    "reasoning": {
+      "file": "data/calibration/calib_reasoning.jsonl",
+      "sha256": null
+    },
+    "uncensored_refusal_like": {
+      "file": "data/calibration/calib_uncensored_refusal_like.jsonl",
+      "sha256": null
+    }
+  },
+  "activation_extraction": {
+    "layers": "all",
+    "n_prompts_per_subset": 128,
+    "batch_size": 1,
+    "max_length": 512,
+    "text_field": "text",
+    "pooling": "last_non_padding_token",
+    "normalization": "l2"
+  },
+  "metrics": {
+    "mmd_rbf": {
+      "enabled": true,
+      "bandwidth": "median",
+      "scales": [
+        0.25,
+        0.5,
+        1.0,
+        2.0,
+        4.0
+      ]
+    },
+    "projected_js": {
+      "enabled": true,
+      "projection_seed": 1234,
+      "n_projections": 64,
+      "bins": 32,
+      "epsilon": 1e-08
+    }
+  },
+  "forgetting_domains": {
+    "B_if": "instruction",
+    "B_reasoning_math": "reasoning",
+    "B_reasoning_long": "reasoning",
+    "B_uncensored": "uncensored_refusal_like"
+  }
+}

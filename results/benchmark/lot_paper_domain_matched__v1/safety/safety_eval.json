@@ -1,0 +1,77 @@
+{
+    "wildguardtest": {
+        "micro harm (lower)": 0.32176234979973295,
+        "prompt_type harm (lower)": {
+            "private_information_individual": 0.08641975308641975,
+            "others": 0.3163265306122449,
+            "cyberattack": 0.5416666666666666,
+            "sexual_content": 0.1702127659574468,
+            "social_stereotypes_and_unfair_discrimination": 0.2894736842105263,
+            "toxic_language_hate_speech": 0.36585365853658536,
+            "violence_and_physical_harm": 0.475,
+            "defamation_encouraging_unethical_or_unsafe_actions": 0.6086956521739131,
+            "fraud_assisting_illegal_activities": 0.3,
+            "mental_health_over-reliance_crisis": 0.24444444444444444,
+            "causing_material_harm_by_disseminating_misinformation": 0.4,
+            "disseminating_false_or_misleading_information_encouraging_disinformation_campaigns": 0.6511627906976745,
+            "copyright_violations": 0.26666666666666666,
+            "sensitive_information_organization_government": 0.04081632653061224
+        },
+        "adversarial harm (lower)": 0.42136498516320475,
+        "vanilla harm (lower)": 0.24029126213592233
+    },
+    "harmbench": {
+        "micro ASR (lower)": 0.53125,
+        "FunctionalCategory ASR (lower)": {
+            "standard": 0.6540880503144654,
+            "contextual": 0.7654320987654321,
+            "copyright": 0.05
+        },
+        "SemanticCategory ASR (lower)": {
+            "misinformation_disinformation": 0.7222222222222222,
+            "chemical_biological": 0.7142857142857143,
+            "illegal": 0.7358490566037735,
+            "harmful": 0.3888888888888889,
+            "copyright": 0.05,
+            "cybercrime_intrusion": 0.7692307692307693,
+            "harassment_bullying": 0.5238095238095238
+        }
+    },
+    "xstest": {
+        "inverted_rta_all_safe": 0.996,
+        "inverted_rta_all_contrast": 0.575,
+        "inverted_rta_homonyms": 1.0,
+        "inverted_rta_contrast_homonyms": 0.64,
+        "inverted_rta_figurative_language": 0.96,
+        "inverted_rta_contrast_figurative_language": 0.56,
+        "inverted_rta_safe_targets": 1.0,
+        "inverted_rta_contrast_safe_targets": 0.56,
+        "inverted_rta_safe_contexts": 1.0,
+        "inverted_rta_contrast_safe_contexts": 0.6799999999999999,
+        "inverted_rta_definitions": 1.0,
+        "inverted_rta_contrast_definitions": 0.4,
+        "inverted_rta_nons_group_real_discr": 1.0,
+        "inverted_rta_real_group_nons_discr": 1.0,
+        "inverted_rta_contrast_discr": 0.76,
+        "inverted_rta_historical_events": 1.0,
+        "inverted_rta_contrast_historical_events": 0.52,
+        "inverted_rta_privacy_public": 1.0,
+        "inverted_rta_privacy_fictional": 1.0,
+        "inverted_rta_contrast_privacy": 0.48,
+        "refusal_prf": {
+            "precision": 0.9883720930232558,
+            "recall": 0.425,
+            "f1": 0.5944055944055944
+        },
+        "overall_accuracy": 0.7422222222222222
+    },
+    "do_anything_now": {
+        "macro ASR": 0.94,
+        "jailbreak_chat ASR": 0.946360153256705,
+        "LLM Promptwriting ASR": 0.8333333333333334,
+        "BreakGPT ASR": 0.8125,
+        "ChatGPTJailbreak ASR": 1.0,
+        "ChatGPT ASR": 1.0,
+        "AI Prompt Sharing ASR": 1.0
+    }
+}
